@@ -132,7 +132,7 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   }
 
   async update(id: string, data: UpdateQuery<T>, options?: QueryOptions): Promise<T | null> {
-    return await this.model.findByIdAndUpdate(id, data, { new: true, ...options }).exec();
+    return await this.model.findByIdAndUpdate(id, data, { ...options, new: true }).exec();
   }
 
   async updateMany(filter: FilterQuery<T>, data: UpdateQuery<T>, options?: QueryOptions): Promise<any> {
@@ -152,8 +152,8 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   }
 
   async exists(filter: FilterQuery<T>): Promise<boolean> {
-    const count = await this.model.countDocuments(filter).limit(1).exec();
-    return count > 0;
+    const result = await this.model.exists(filter);
+    return !!result;
   }
 
   async aggregate(pipeline: any[]): Promise<any[]> {
