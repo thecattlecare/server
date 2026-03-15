@@ -7,3 +7,6 @@ export const AsyncHandler = (fn: AsyncFunction) => {
     fn(req, res, next).catch(next);
   };
 }
+
+// Backward-compatible alias used by some modules.
+export const asyncHandler = AsyncHandler;

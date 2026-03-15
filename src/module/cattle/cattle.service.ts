@@ -152,7 +152,7 @@ export class CattleService {
       limit: queryParams.limit || 10,
     });
 
-    const total = await this.cattleRepository.count({ reproductiveStatus: 'pregnant', isActive: true });
+    const total = await this.cattleRepository.count({ reproductiveStatus: 'Pregnant', isActive: true });
     const limit = queryParams.limit || 10;
     const pages = Math.ceil(total / limit);
     const page = queryParams.page || 1;
@@ -192,6 +192,8 @@ export class CattleService {
       return {
         totalCattle: 0,
         activeCattle: 0,
+        pregnantCattle: 0,
+        sickAnimals: 0,
         avgWeight: 0,
         averagePrice: 0,
       };
