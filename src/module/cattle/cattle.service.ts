@@ -1,4 +1,5 @@
-import { CattleRepository } from './cattle.repository';
+import { BaseRepository } from '../../utils/base-repository';
+import { Animal } from './cattle.model';
 import { CreateCattleInput, UpdateCattleInput } from './cattle.types';
 import { ApiError } from '../../utils/api-error';
 import { PaginatedResult, QueryParams } from '../../utils/types';
@@ -6,19 +7,16 @@ import { IAnimal } from './cattle.types';
 import { FilterQuery } from 'mongoose';
 
 export class CattleService {
-  private cattleRepository: CattleRepository;
+  private cattleRepository: BaseRepository<IAnimal>;
 
   constructor() {
-    this.cattleRepository = new CattleRepository();
+    this.cattleRepository = new BaseRepository(Animal);
   }
 
-  /**
-   * Create a new cattle
-   */
   async createCattle(data: CreateCattleInput): Promise<IAnimal> {
     // Check if tag already exists (if provided)
     if (data.tag) {
-      const existing = await this.cattleRepository.findByTag(data.tag);
+      const existing = await this.cattleRepository.findOne({ tag: data.tag } as any);
       if (existing) {
         throw ApiError.BAD_REQUEST(`Cattle with tag "${data.tag}" already exists`);
       }
@@ -76,9 +74,6 @@ export class CattleService {
     return cattle;
   }
 
-  /**
-   * Update cattle
-   */
   async updateCattle(id: string, data: UpdateCattleInput): Promise<IAnimal> {
     // Verify cattle exists
     const cattle = await this.cattleRepository.findById(id);
@@ -88,7 +83,7 @@ export class CattleService {
 
     // Check for tag uniqueness if tag is being updated
     if (data.tag && data.tag !== cattle.tag) {
-      const existing = await this.cattleRepository.findByTag(data.tag);
+      const existing = await this.cattleRepository.findOne({ tag: data.tag } as any);
       if (existing) {
         throw ApiError.BAD_REQUEST(`Cattle with tag "${data.tag}" already exists`);
       }
@@ -102,16 +97,13 @@ export class CattleService {
     return updated;
   }
 
-  /**
-   * Delete cattle (soft delete - deactivate)
-   */
   async deleteCattle(id: string): Promise<IAnimal> {
     const cattle = await this.cattleRepository.findById(id);
     if (!cattle) {
       throw ApiError.NOT_FOUND('Cattle not found');
     }
 
-    const deleted = await this.cattleRepository.deactivate(id);
+    const deleted = await this.cattleRepository.update(id, { isActive: false } as any);
     if (!deleted) {
       throw ApiError.INTERNAL_SERVER_ERROR('Failed to delete cattle');
     }
@@ -119,16 +111,13 @@ export class CattleService {
     return deleted;
   }
 
-  /**
-   * Reactivate cattle
-   */
   async reactivateCattle(id: string): Promise<IAnimal> {
     const cattle = await this.cattleRepository.findById(id);
     if (!cattle) {
       throw ApiError.NOT_FOUND('Cattle not found');
     }
 
-    const activated = await this.cattleRepository.activate(id);
+    const activated = await this.cattleRepository.update(id, { isActive: true } as any);
     if (!activated) {
       throw ApiError.INTERNAL_SERVER_ERROR('Failed to reactivate cattle');
     }
@@ -143,31 +132,10 @@ export class CattleService {
     return this.getAllCattle({ ...queryParams, isActive: true } as any);
   }
 
-  /**
-   * Get pregnant cattle
-   */
   async getPregnantCattle(queryParams: QueryParams): Promise<PaginatedResult<IAnimal>> {
-    const pregnant = await this.cattleRepository.findPregnant({
-      skip: ((queryParams.page || 1) - 1) * (queryParams.limit || 10),
-      limit: queryParams.limit || 10,
-    });
-
-    const total = await this.cattleRepository.count({ reproductiveStatus: 'pregnant', isActive: true });
-    const limit = queryParams.limit || 10;
-    const pages = Math.ceil(total / limit);
-    const page = queryParams.page || 1;
-
-    return {
-      data: pregnant,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages,
-        hasNext: page < pages,
-        hasPrev: page > 1,
-      },
-    };
+    const filters: FilterQuery<IAnimal> = { reproductiveStatus: 'pregnant', isActive: true };
+    const result = await this.cattleRepository.findWithPagination(filters, queryParams);
+    return result;
   }
 
   /**
@@ -183,11 +151,32 @@ export class CattleService {
     return result;
   }
 
-  /**
-   * Get cattle statistics
-   */
   async getCattleStatistics(): Promise<any> {
-    const stats = await this.cattleRepository.getStatistics();
+    const stats = await this.cattleRepository.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalCattle: { $sum: 1 },
+          activeCattle: {
+            $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] },
+          },
+          byGender: {
+            $push: {
+              gender: '$gender',
+              count: 1,
+            },
+          },
+          byBreed: {
+            $push: {
+              breed: '$breed',
+              count: 1,
+            },
+          },
+          avgWeight: { $avg: '$weight' },
+          averagePrice: { $avg: '$purchasePrice' },
+        },
+      },
+    ]);
     if (!stats || stats.length === 0) {
       return {
         totalCattle: 0,
@@ -200,10 +189,7 @@ export class CattleService {
     return stats[0];
   }
 
-  /**
-   * Search cattle by tag
-   */
   async searchByTag(tag: string): Promise<IAnimal | null> {
-    return this.cattleRepository.findByTag(tag);
+    return this.cattleRepository.findOne({ tag } as any);
   }
 }

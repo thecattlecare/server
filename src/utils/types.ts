@@ -38,6 +38,7 @@ export interface PaginatedResult<T> {
 
 export interface IApiResponse<T> {
   success: boolean;
+  status: number;
   message: string;
   data?: T;
   error?: any;
