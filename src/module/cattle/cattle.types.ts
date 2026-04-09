@@ -1,18 +1,21 @@
-import { Document } from "mongoose"
+import { Document } from 'mongoose';
 import { z } from 'zod';
 
 export interface IAnimal extends Document {
+  rfid: string;
   tag?: string;
-  name?: string;
+  name: string;
   breed: string;
-  gender: 'cow' | 'bull' | 'heifer' | 'calf';
-  dateOfBirth?: Date;
-  weight?: number;
-  parity?: number;
-  lactationStage?: 'early' | 'mid' | 'late' | 'dry';
-  reproductiveStatus?: 'pregnant' | 'inseminated' | 'open';
-  purchaseDate?: Date;
-  purchasePrice?: number;
+  gender: 'Male' | 'Female';
+  dob: Date;
+  weight: number;
+  parity: number;
+  lactationStage: 'Early' | 'Mid' | 'Late' | 'Dry';
+  reproductiveStatus: 'Pregnant' | 'Inseminated' | 'Open';
+  calvingDate?: Date;
+  group: 'Cow' | 'Bull' | 'Heifer' | 'Calf';
+  healthStatus?: string;
+  origin?: string;
   notes?: string;
   isActive: boolean;
   createdAt: Date;
@@ -24,23 +27,32 @@ export interface IAnimal extends Document {
  */
 
 // Enum schemas
-const genderEnum = z.enum(['cow', 'bull', 'heifer', 'calf']);
-const lactationStageEnum = z.enum(['early', 'mid', 'late', 'dry']).optional();
-const reproductiveStatusEnum = z.enum(['pregnant', 'inseminated', 'open']).optional();
+const genderEnum = z.enum(['Male', 'Female']);
+const groupEnum = z.enum(['Cow', 'Bull', 'Heifer', 'Calf']);
+const lactationStageEnum = z.enum(['Early', 'Mid', 'Late', 'Dry']).optional();
+const reproductiveStatusEnum = z.enum(['Pregnant', 'Inseminated', 'Open']).optional();
+
+const optionalDate = z.preprocess(
+  (value) => (value === '' || value === null || value === undefined ? undefined : value),
+  z.coerce.date().optional()
+);
 
 // Create cattle schema
 export const createCattleSchema = z.object({
+  rfid: z.string().trim().min(1, 'RFID is required'),
   tag: z.string().trim().min(1, 'Tag is required').optional(),
-  name: z.string().trim().max(100, 'Name must be less than 100 characters').optional(),
+  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
   breed: z.string().trim().min(1, 'Breed is required').max(100, 'Breed must be less than 100 characters'),
-  gender: genderEnum.refine(val => val, 'Gender is required'),
-  dateOfBirth: z.string().datetime().optional().or(z.date()),
-  weight: z.number().positive('Weight must be positive').optional(),
+  gender: genderEnum,
+  dob: z.coerce.date(),
+  weight: z.number().nonnegative('Weight must be non-negative'),
   parity: z.number().nonnegative('Parity must be non-negative').int().optional(),
   lactationStage: lactationStageEnum,
   reproductiveStatus: reproductiveStatusEnum,
-  purchaseDate: z.string().datetime().optional().or(z.date()),
-  purchasePrice: z.number().nonnegative('Purchase price must be non-negative').optional(),
+  calvingDate: optionalDate,
+  group: groupEnum.optional(),
+  healthStatus: z.string().trim().max(100, 'Health status must be less than 100 characters').optional(),
+  origin: z.string().trim().max(100, 'Origin must be less than 100 characters').optional(),
   notes: z.string().trim().max(500, 'Notes must be less than 500 characters').optional(),
   isActive: z.boolean().default(true).optional(),
 });
@@ -53,7 +65,10 @@ export const cattleQuerySchema = z.object({
   tag: z.string().optional(),
   breed: z.string().optional(),
   gender: genderEnum.optional(),
-  isActive: z.string().transform(val => val === 'true').optional(),
+  isActive: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => (typeof val === 'boolean' ? val : val === 'true'))
+    .optional(),
   page: z.string().transform(Number).optional().pipe(z.number().min(1).default(1)),
   limit: z.string().transform(Number).optional().pipe(z.number().min(1).max(100).default(10)),
   sort: z.string().optional(),
