@@ -67,6 +67,28 @@ class MilkRepository extends base_repository_1.BaseRepository {
             byShift
         };
     }
+    async getTotalAmount(filter = {}) {
+        const query = {};
+        if (filter.startDate || filter.endDate) {
+            query.date = {};
+            if (filter.startDate)
+                query.date.$gte = filter.startDate;
+            if (filter.endDate)
+                query.date.$lte = filter.endDate;
+        }
+        const result = await this.model.aggregate([
+            {
+                $match: query,
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: '$amount' },
+                },
+            },
+        ]);
+        return result.length > 0 ? result[0].totalAmount : 0;
+    }
     async getStatsByDateRange(startDate, endDate) {
         return this.model.aggregate([
             {
@@ -172,6 +194,118 @@ class MilkRepository extends base_repository_1.BaseRepository {
                 $limit: limit
             }
         ]);
+    }
+    async getLast14DaysProduction() {
+        const endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 13); // 13 days ago to include today = 14 days
+        startDate.setHours(0, 0, 0, 0);
+        const result = await this.model.aggregate([
+            {
+                $match: {
+                    date: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: '%Y-%m-%d', date: '$date' }
+                    },
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+        // Fill in missing days with 0
+        const dayMap = {};
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            dayMap[dateStr] = 0;
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        result.forEach((item) => {
+            dayMap[item._id] = item.totalAmount;
+        });
+        return Object.entries(dayMap).map(([date, amount]) => ({
+            date,
+            amount: amount
+        }));
+    }
+    async getLast12WeeksProduction() {
+        const endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - (12 * 7 - 1)); // 12 weeks
+        startDate.setHours(0, 0, 0, 0);
+        const result = await this.model.aggregate([
+            {
+                $match: {
+                    date: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$date' },
+                        week: { $week: '$date' }
+                    },
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { '_id.year': 1, '_id.week': 1 }
+            }
+        ]);
+        return result.map((item) => ({
+            week: `W${item._id.week}`,
+            amount: item.totalAmount
+        }));
+    }
+    async getLast12MonthsProduction() {
+        const endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+        const startDate = new Date(endDate);
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        const result = await this.model.aggregate([
+            {
+                $match: {
+                    date: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: '%Y-%m', date: '$date' }
+                    },
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+        const monthMap = {};
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            const monthStr = currentDate.toISOString().slice(0, 7);
+            monthMap[monthStr] = 0;
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+        result.forEach((item) => {
+            monthMap[item._id] = item.totalAmount;
+        });
+        return Object.entries(monthMap).map(([month, amount]) => ({
+            month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+            amount: amount
+        }));
     }
 }
 exports.MilkRepository = MilkRepository;

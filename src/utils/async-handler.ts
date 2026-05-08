@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 
-type AsyncFunction = (req: Request, res: Response, next: NextFunction) => Promise<any>;
+type AsyncFunction = (req: Request, res: Response, next: NextFunction) => Promise<any> | any;
 
 export const AsyncHandler = (fn: AsyncFunction) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    fn(req, res, next).catch(next);
+    Promise.resolve(fn(req, res, next)).catch(next);
   };
-}
+};
 
 // Backward-compatible alias used by some modules.
 export const asyncHandler = AsyncHandler;

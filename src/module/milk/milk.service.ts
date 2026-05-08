@@ -33,7 +33,7 @@ export class MilkService {
     });
 
     if (existingRecord) {
-      throw new ApiError(400, `Milk record for ${data.shift} shift already exists for this date`);
+      throw new ApiError(400, 'Duplication of milk at the same date, time, and same cow is not allowed');
     }
 
     const milkDate = data.date instanceof Date ? data.date : new Date(data.date);
@@ -105,6 +105,10 @@ export class MilkService {
 
   async getTodayStats() {
     return this.repository.getDailyStats(new Date());
+  }
+
+  async getTotalAmount(filter: { startDate?: Date; endDate?: Date } = {}) {
+    return this.repository.getTotalAmount(filter);
   }
 
   async getDashboardStats(): Promise<IMilkDashboardStats> {
@@ -217,5 +221,17 @@ export class MilkService {
         recordCount: records.data.length
       }
     };
+  }
+
+  async getLast14DaysProduction() {
+    return this.repository.getLast14DaysProduction();
+  }
+
+  async getLast12WeeksProduction() {
+    return this.repository.getLast12WeeksProduction();
+  }
+
+  async getLast12MonthsProduction() {
+    return this.repository.getLast12MonthsProduction();
   }
 }
