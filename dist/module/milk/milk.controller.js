@@ -2,11 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MilkController = void 0;
 const milk_service_1 = require("./milk.service");
+const milk_sale_service_1 = require("./milk-sale.service");
 const async_handler_1 = require("../../utils/async-handler");
 const api_response_1 = require("../../utils/api-response");
 class MilkController {
     constructor() {
         this.service = new milk_service_1.MilkService();
+        this.saleService = new milk_sale_service_1.MilkSaleService();
         this.createMilkRecord = (0, async_handler_1.asyncHandler)(async (req, res) => {
             const data = {
                 ...req.body
@@ -44,6 +46,22 @@ class MilkController {
             const stats = await this.service.getTodayStats();
             return res.status(200).json(api_response_1.ApiResponse.success('Today\'s stats fetched successfully', stats));
         });
+        this.getSummaryStats = (0, async_handler_1.asyncHandler)(async (req, res) => {
+            const [productionToday, salesToday, totalProduced, totalSold] = await Promise.all([
+                this.service.getTodayStats(),
+                this.saleService.getTodayStats(),
+                this.service.getTotalAmount(),
+                this.saleService.getTotalAmount(),
+            ]);
+            const currentStock = Math.max(totalProduced - totalSold, 0);
+            return res.status(200).json(api_response_1.ApiResponse.success('Milk summary fetched successfully', {
+                productionToday,
+                salesToday,
+                totalProduced,
+                totalSold,
+                currentStock,
+            }));
+        });
         this.getDashboardStats = (0, async_handler_1.asyncHandler)(async (req, res) => {
             const stats = await this.service.getDashboardStats();
             return res.status(200).json(api_response_1.ApiResponse.success('Dashboard stats fetched successfully', stats));
@@ -74,6 +92,18 @@ class MilkController {
                 recordCount: records.data.length,
                 dateRange: { startDate, endDate }
             }));
+        });
+        this.getLast14DaysProduction = (0, async_handler_1.asyncHandler)(async (req, res) => {
+            const data = await this.service.getLast14DaysProduction();
+            return res.status(200).json(api_response_1.ApiResponse.success('Last 14 days production fetched successfully', data));
+        });
+        this.getLast12WeeksProduction = (0, async_handler_1.asyncHandler)(async (req, res) => {
+            const data = await this.service.getLast12WeeksProduction();
+            return res.status(200).json(api_response_1.ApiResponse.success('Last 12 weeks production fetched successfully', data));
+        });
+        this.getLast12MonthsProduction = (0, async_handler_1.asyncHandler)(async (req, res) => {
+            const data = await this.service.getLast12MonthsProduction();
+            return res.status(200).json(api_response_1.ApiResponse.success('Last 12 months production fetched successfully', data));
         });
     }
 }

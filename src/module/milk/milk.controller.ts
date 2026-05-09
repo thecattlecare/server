@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import { MilkService } from './milk.service';
+import { MilkSaleService } from './milk-sale.service';
 import { asyncHandler } from '../../utils/async-handler';
 import { ApiResponse } from '../../utils/api-response';
 import { IMilkCreate, IMilkFilter } from './milk.types';
 
 export class MilkController {
   private service = new MilkService();
+  private saleService = new MilkSaleService();
 
   createMilkRecord = asyncHandler(async (req: Request, res: Response) => {
     const data: IMilkCreate = {
@@ -52,6 +54,27 @@ export class MilkController {
     return res.status(200).json(ApiResponse.success('Today\'s stats fetched successfully', stats));
   });
 
+  getSummaryStats = asyncHandler(async (req: Request, res: Response) => {
+    const [productionToday, salesToday, totalProduced, totalSold] = await Promise.all([
+      this.service.getTodayStats(),
+      this.saleService.getTodayStats(),
+      this.service.getTotalAmount(),
+      this.saleService.getTotalAmount(),
+    ]);
+
+    const currentStock = Math.max(totalProduced - totalSold, 0);
+
+    return res.status(200).json(
+      ApiResponse.success('Milk summary fetched successfully', {
+        productionToday,
+        salesToday,
+        totalProduced,
+        totalSold,
+        currentStock,
+      })
+    );
+  });
+
   getDashboardStats = asyncHandler(async (req: Request, res: Response) => {
     const stats = await this.service.getDashboardStats();
     return res.status(200).json(ApiResponse.success('Dashboard stats fetched successfully', stats));
@@ -88,5 +111,20 @@ export class MilkController {
       recordCount: records.data.length,
       dateRange: { startDate, endDate }
     }));
+  });
+
+  getLast14DaysProduction = asyncHandler(async (req: Request, res: Response) => {
+    const data = await this.service.getLast14DaysProduction();
+    return res.status(200).json(ApiResponse.success('Last 14 days production fetched successfully', data));
+  });
+
+  getLast12WeeksProduction = asyncHandler(async (req: Request, res: Response) => {
+    const data = await this.service.getLast12WeeksProduction();
+    return res.status(200).json(ApiResponse.success('Last 12 weeks production fetched successfully', data));
+  });
+
+  getLast12MonthsProduction = asyncHandler(async (req: Request, res: Response) => {
+    const data = await this.service.getLast12MonthsProduction();
+    return res.status(200).json(ApiResponse.success('Last 12 months production fetched successfully', data));
   });
 }

@@ -30,7 +30,7 @@ class MilkService {
             date: { $gte: startOfDay, $lte: endOfDay }
         });
         if (existingRecord) {
-            throw new api_error_1.ApiError(400, `Milk record for ${data.shift} shift already exists for this date`);
+            throw new api_error_1.ApiError(400, 'Duplication of milk at the same date, time, and same cow is not allowed');
         }
         const milkDate = data.date instanceof Date ? data.date : new Date(data.date);
         const record = await this.repository.create({
@@ -88,6 +88,9 @@ class MilkService {
     }
     async getTodayStats() {
         return this.repository.getDailyStats(new Date());
+    }
+    async getTotalAmount(filter = {}) {
+        return this.repository.getTotalAmount(filter);
     }
     async getDashboardStats() {
         const today = new Date();
@@ -182,6 +185,15 @@ class MilkService {
                 recordCount: records.data.length
             }
         };
+    }
+    async getLast14DaysProduction() {
+        return this.repository.getLast14DaysProduction();
+    }
+    async getLast12WeeksProduction() {
+        return this.repository.getLast12WeeksProduction();
+    }
+    async getLast12MonthsProduction() {
+        return this.repository.getLast12MonthsProduction();
     }
 }
 exports.MilkService = MilkService;
