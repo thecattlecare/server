@@ -9,17 +9,16 @@
   "regions": [
     "sin1"
   ],
-  "functions": {
-    "src/server.ts": {
-      "runtime": "nodejs20.x",
-      "memory": 1024,
-      "maxDuration": 60
+  "builds": [
+    {
+      "src": "dist/server.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/dist/server.js"
+      "dest": "dist/server.js"
     }
   ]
 }
