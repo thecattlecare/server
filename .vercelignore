@@ -6,6 +6,4 @@ npm-debug.log
 .git
 .gitignore
 README.md
-src
 .vercelignore
-tsconfig.json
