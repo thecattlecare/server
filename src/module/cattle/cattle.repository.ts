@@ -1,11 +1,13 @@
 import { BaseRepository } from '../../utils/base-repository';
 import { Animal } from './cattle.model';
-import { QueryOptions } from 'mongoose';
+import { QueryOptions, Model } from 'mongoose';
 import { IAnimal } from './cattle.types';
 
 export class CattleRepository extends BaseRepository<IAnimal> {
   constructor() {
-    super(Animal);
+    // The model file and types file currently define separate IAnimal interfaces.
+    // Cast to the repository contract to keep compile-time types consistent here.
+    super(Animal as unknown as Model<IAnimal>);
   }
 
   /**
@@ -40,7 +42,7 @@ export class CattleRepository extends BaseRepository<IAnimal> {
    * Find pregnant cattle
    */
   async findPregnant(options?: QueryOptions): Promise<IAnimal[]> {
-    return this.find({ reproductiveStatus: 'pregnant', isActive: true }, options as any);
+    return this.find({ reproductiveStatus: 'Pregnant', isActive: true }, options as any);
   }
 
   /**
@@ -75,6 +77,12 @@ export class CattleRepository extends BaseRepository<IAnimal> {
           totalCattle: { $sum: 1 },
           activeCattle: {
             $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] },
+          },
+          pregnantCattle: {
+            $sum: { $cond: [{ $and: [{ $eq: ['$reproductiveStatus', 'Pregnant'] }, { $eq: ['$isActive', true] }] }, 1, 0] },
+          },
+          sickAnimals: {
+            $sum: { $cond: [{ $and: [{ $ne: ['$healthStatus', 'Healthy'] }, { $ne: ['$healthStatus', null] }, { $eq: ['$isActive', true] }] }, 1, 0] },
           },
           byGender: {
             $push: {

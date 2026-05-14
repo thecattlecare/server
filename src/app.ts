@@ -1,10 +1,86 @@
 import express from "express";
+import cors from "cors";
+import cookieParser from 'cookie-parser';
 import cattleRoutes from "./module/cattle/cattle.route";
+import milkRoutes from './module/milk/milk.route';
+import healthRoutes from './module/health/health.route';
+import feedingRoutes from './module/feeding/feeding.route';
+import authRoutes from './module/auth/auth.route';
+import { authenticateRequest } from './module/auth/auth.middleware';
+import { ApiResponse } from './utils/api-response';
+import { ApiError } from './utils/api-error';
 
 const app = express();
-app.use(express.json())
+
+// Middleware
+app.use(express.json({ limit: '5mb' })); // Added limit for larger payloads
+app.use(cookieParser());
+
+// CORS configuration for both dev and production
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
+// Health check endpoint (useful for Vercel)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  });
+});
 
 // Routes
+app.use('/api/auth', authRoutes);
+
+// Protected routes
+app.use('/api', authenticateRequest);
+
 app.use('/api/cattle', cattleRoutes);
+app.use('/api/milk', milkRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/feeding', feedingRoutes);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json(ApiResponse.error('Route not found'));
+});
+
+// Global error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Log error in development
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Error:', err);
+  }
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err?.statusCode || err?.status || 500;
+  const message = err?.message || 'Internal server error';
+
+  // Don't expose stack traces in production
+  const response = process.env.NODE_ENV === 'production'
+    ? ApiResponse.error(message)
+    : ApiResponse.error(message, err instanceof ApiError ? undefined : err?.stack);
+
+  return res.status(statusCode).json(response);
+});
 
 export default app;
