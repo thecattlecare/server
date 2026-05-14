@@ -1,29 +1,43 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 
-dotenv.config();
+const MONGODB_URI = process.env.MONGODB_URI;
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/your_database';
+if (!MONGODB_URI) {
+  throw new Error('Please define MONGODB_URI environment variable');
+}
 
-export const connectDatabase = async (): Promise<void> => {
+// Global cache for serverless environments
+let cached = (global as any).mongoose;
+
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
+}
+
+export async function connectDatabase() {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      maxPoolSize: 10, // Important for serverless
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+      console.log('✅ MongoDB connected successfully');
+      return mongoose;
+    });
+  }
+
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    cached.conn = await cached.promise;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    cached.promise = null;
     throw error;
   }
-};
 
-mongoose.connection.on('error', (error) => {
-  console.error('MongoDB connection error:', error);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
-});
-
-process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  process.exit(0);
-});
+  return cached.conn;
+}
