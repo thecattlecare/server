@@ -16,7 +16,11 @@
     "NODE_ENV": "production",
     "MONGODB_URI": "@mongodb_uri",
     "JWT_SECRET": "@jwt_secret",
-    "FRONTEND_URL": "@frontend_url"
+    "FRONTEND_URL": "@frontend_url",
+    "AUTH_ACCESS_TOKEN_SECRET": "@auth_access_token_secret",
+    "AUTH_REFRESH_TOKEN_SECRET": "@auth_refresh_token_secret",
+    "AUTH_REFRESH_TOKEN_EXPIRATION": "@auth_refresh_token_expiration",
+    "AUTH_ACCESS_TOKEN_EXPIRATION": "@auth_access_token_expiration"
   },
   "functions": {
     "api/index.ts": {
