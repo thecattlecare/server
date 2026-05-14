@@ -2,11 +2,10 @@
   "name": "express-ts-backend",
   "version": "1.0.0",
   "scripts": {
-    "dev": "nodemon server.ts",
+    "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "vercel-build": "npm run build",
-    "vercel-dev": "vercel dev"
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

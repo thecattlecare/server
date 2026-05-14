@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import app from "./app";
 import { connectDatabase } from "./config/db";
 import { seedAdminUser } from "./utils/seed-admin";
