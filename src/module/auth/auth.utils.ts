@@ -98,42 +98,74 @@ export const verifyRefreshToken = (token: string) => {
 
 export const parseDeviceInfo = (
   useragentObj?: any,
-  ipAddress?: string
+  ipAddress?: string,
+  headers?: any // Pass the full request headers
 ): ISessionDeviceInfo => {
-  // If useragentObj is from express-useragent library
-  if (useragentObj && typeof useragentObj === 'object') {
-    const browser = useragentObj.browser || 'Unknown';
-    const os = useragentObj.os || 'Unknown';
-    const device = useragentObj.isMobile ? 'Mobile' : useragentObj.isTablet ? 'Tablet' : 'Desktop';
-    const ua = useragentObj.source || '';
 
-    return {
-      ipAddress,
-      userAgent: ua,
-      browser,
-      os,
-      device,
-    };
-  }
-
-  // Fallback to string parsing if needed
-  const ua = typeof useragentObj === 'string' ? useragentObj : '';
-  const normalized = ua.toLowerCase();
-
+  // Default values
   let browser = 'Unknown';
-  if (normalized.includes('edg/')) browser = 'Edge';
-  else if (normalized.includes('chrome/')) browser = 'Chrome';
-  else if (normalized.includes('firefox/')) browser = 'Firefox';
-  else if (normalized.includes('safari/') && !normalized.includes('chrome/')) browser = 'Safari';
-
   let os = 'Unknown';
-  if (normalized.includes('windows')) os = 'Windows';
-  else if (normalized.includes('mac os')) os = 'macOS';
-  else if (normalized.includes('android')) os = 'Android';
-  else if (normalized.includes('iphone') || normalized.includes('ipad') || normalized.includes('ios')) os = 'iOS';
-  else if (normalized.includes('linux')) os = 'Linux';
+  let device = 'Desktop';
+  let ua = '';
+  let isBot = false;
+  let botName = '';
 
-  const device = normalized.includes('mobile') ? 'Mobile' : 'Desktop';
+  if (useragentObj && typeof useragentObj === 'object') {
+    ua = useragentObj.source || '';
+    browser = useragentObj.browser || 'Unknown';
+
+    // ===== BOT DETECTION =====
+    isBot = useragentObj.isBot ?? false;
+    if (isBot && useragentObj.botName) {
+      botName = useragentObj.botName;
+    }
+
+    // ===== IMPROVED WINDOWS DETECTION =====
+    // Priority 1: Check Client Hints for platform version (MOST RELIABLE)
+    const clientHints = useragentObj.clientHints || headers;
+
+    if (clientHints?.platformVersion) {
+      // Windows 11 returns "14.0.0" or higher (NT 10.0 build 22000+)
+      // Windows 10 returns "10.0.0" or "1.0.0" for older builds
+      const platformVersion = clientHints.platformVersion;
+
+      if (clientHints.platform === 'Windows') {
+        if (platformVersion === '14.0.0' || parseInt(platformVersion) >= 14) {
+          os = 'Windows 11';
+        } else if (platformVersion === '10.0.0' || platformVersion === '1.0.0') {
+          os = 'Windows 10';
+        } else {
+          os = `Windows (${platformVersion})`;
+        }
+      } else {
+        os = useragentObj.os || 'Unknown';
+      }
+    }
+    // Priority 2: Check specific Windows 11 indicators in User-Agent
+    else if (ua && ua.includes('Windows NT 10.0')) {
+      // Windows 11 specific keywords (rare but possible)
+      if (ua.includes('Windows 11') ||
+        ua.includes('Win64; x64; rv:') || // Firefox on Win11
+        (ua.includes('Chrome/') && !ua.includes('Edg/') && isWindows11Build(ua))) {
+        os = 'Windows 11';
+      }
+      // Check for Windows 10 specific indicators
+      else if (ua.includes('Windows 10') || ua.includes('Win64; x64; rv:102')) {
+        os = 'Windows 10';
+      }
+      else {
+        // Default to Windows 10 if we can't determine
+        os = 'Windows 10 or 11';
+      }
+    }
+    // Priority 3: Use standard parsing for other OS
+    else {
+      os = useragentObj.os || 'Unknown';
+    }
+
+    device = useragentObj.isMobile ? 'Mobile' :
+      useragentObj.isTablet ? 'Tablet' : 'Desktop';
+  }
 
   return {
     ipAddress,
@@ -141,8 +173,17 @@ export const parseDeviceInfo = (
     browser,
     os,
     device,
+    isBot,
+    botName,
   };
 };
+
+// Helper function to detect Windows 11 based on build number patterns
+function isWindows11Build(ua: string): boolean {
+  // This is complex because build numbers aren't in UA strings
+  // Better to rely on Client Hints
+  return false; // Not reliable via UA alone
+}
 
 export const getBearerToken = (authorizationHeader?: string) => {
   if (!authorizationHeader) {

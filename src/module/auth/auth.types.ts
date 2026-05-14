@@ -18,6 +18,8 @@ export interface IAuthSession {
   browser?: string;
   os?: string;
   device?: string;
+  isBot?: boolean;
+  botName?: string;
   current?: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -74,6 +76,8 @@ export interface ISessionDeviceInfo {
   browser?: string;
   os?: string;
   device?: string;
+  isBot?: boolean;
+  botName?: string;
 }
 
 export interface IJwtLikePayload extends Record<string, unknown> {
