@@ -21,11 +21,5 @@
     "AUTH_REFRESH_TOKEN_SECRET": "@auth_refresh_token_secret",
     "AUTH_REFRESH_TOKEN_EXPIRATION": "@auth_refresh_token_expiration",
     "AUTH_ACCESS_TOKEN_EXPIRATION": "@auth_access_token_expiration"
-  },
-  "functions": {
-    "api/index.ts": {
-      "maxDuration": 10,
-      "memory": 1024
-    }
   }
 }
