@@ -6,15 +6,6 @@
       "dest": "api/index.ts"
     }
   ],
-  "env": {
-    "NODE_ENV": "production",
-    "MONGODB_URI": "@MONGODB_URI",
-    "FRONTEND_URL": "@FRONTEND_URL",
-    "AUTH_ACCESS_TOKEN_SECRET": "@AUTH_ACCESS_TOKEN_SECRET",
-    "AUTH_REFRESH_TOKEN_SECRET": "@AUTH_REFRESH_TOKEN_SECRET",
-    "AUTH_REFRESH_TOKEN_EXPIRATION": "@AUTH_REFRESH_TOKEN_EXPIRATION",
-    "AUTH_ACCESS_TOKEN_EXPIRATION": "@AUTH_ACCESS_TOKEN_EXPIRATION"
-  },
   "functions": {
     "api/index.ts": {
       "maxDuration": 10,
