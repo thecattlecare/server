@@ -55,11 +55,12 @@ export class AuthService {
     return User.findOne({ email: email.toLowerCase().trim(), isActive: true }).select('+passwordHash');
   }
 
-  private buildDeviceInfo(req: Pick<Request, 'ip' | 'headers'>): ISessionDeviceInfo {
-    return parseDeviceInfo(req.headers['user-agent'], req.ip);
+  private buildDeviceInfo(req: any): ISessionDeviceInfo {
+    // Use express-useragent parsed data and request-ip for detailed information
+    return parseDeviceInfo(req.useragent, req.clientIp || req.ip);
   }
 
-  private async createSessionForUser(user: IAuthUserDocument, req: Pick<Request, 'ip' | 'headers'>) {
+  private async createSessionForUser(user: IAuthUserDocument, req: any) {
     const deviceInfo = this.buildDeviceInfo(req);
     const session = await AuthSession.create({
       userId: user._id,
@@ -96,7 +97,7 @@ export class AuthService {
     return { session, accessToken, refreshToken };
   }
 
-  async login(payload: ILoginInput, req: Pick<Request, 'ip' | 'headers'>): Promise<ITokenPairResponse> {
+  async login(payload: ILoginInput, req: any): Promise<ITokenPairResponse> {
     const user = await this.findUserByEmail(payload.email);
     if (!user || !user.passwordHash) {
       throw ApiError.UNAUTHORIZED('Invalid email or password');
@@ -121,7 +122,7 @@ export class AuthService {
     };
   }
 
-  async refresh(refreshToken: string, req: Pick<Request, 'ip' | 'headers'>): Promise<ITokenPairResponse> {
+  async refresh(refreshToken: string, req: any): Promise<ITokenPairResponse> {
     const payload = verifyRefreshToken(refreshToken);
     const session = await AuthSession.findById(payload.sid).populate('userId').select('+refreshTokenHash');
 
