@@ -5,8 +5,7 @@
     "dev": "nodemon server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "vercel-build": "npm run build",
-    "vercel-dev": "vercel dev"
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
