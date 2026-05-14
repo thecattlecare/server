@@ -2,6 +2,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from 'cookie-parser';
+import requestIp from 'request-ip';
+import useragent from 'express-useragent';
 import cattleRoutes from "./module/cattle/cattle.route";
 import milkRoutes from './module/milk/milk.route';
 import healthRoutes from './module/health/health.route';
@@ -16,6 +18,12 @@ const app = express();
 // Middleware
 app.use(express.json({ limit: '5mb' })); // Added limit for larger payloads
 app.use(cookieParser());
+
+// IP Detection middleware
+app.use(requestIp.mw());
+
+// User Agent parsing middleware
+app.use(useragent.express());
 
 // CORS configuration for both dev and production
 const allowedOrigins = [

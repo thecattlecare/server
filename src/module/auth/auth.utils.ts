@@ -96,8 +96,28 @@ export const verifyRefreshToken = (token: string) => {
   return payload;
 };
 
-export const parseDeviceInfo = (userAgent?: string, ipAddress?: string): ISessionDeviceInfo => {
-  const ua = userAgent || '';
+export const parseDeviceInfo = (
+  useragentObj?: any,
+  ipAddress?: string
+): ISessionDeviceInfo => {
+  // If useragentObj is from express-useragent library
+  if (useragentObj && typeof useragentObj === 'object') {
+    const browser = useragentObj.browser || 'Unknown';
+    const os = useragentObj.os || 'Unknown';
+    const device = useragentObj.isMobile ? 'Mobile' : useragentObj.isTablet ? 'Tablet' : 'Desktop';
+    const ua = useragentObj.source || '';
+
+    return {
+      ipAddress,
+      userAgent: ua,
+      browser,
+      os,
+      device,
+    };
+  }
+
+  // Fallback to string parsing if needed
+  const ua = typeof useragentObj === 'string' ? useragentObj : '';
   const normalized = ua.toLowerCase();
 
   let browser = 'Unknown';
