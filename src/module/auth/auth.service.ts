@@ -17,6 +17,7 @@ import {
   buildAuthContext,
   createAccessToken,
   createRefreshToken,
+  detectIP,
   hashPassword,
   hashToken,
   normalizeRole,
@@ -113,6 +114,10 @@ export class AuthService {
     }
 
     const { session, accessToken, refreshToken } = await this.createSessionForUser(user, req);
+
+    if (process.env.N8N_WEBHOOK_URL) {
+      detectIP(user, session);
+    }
 
     return {
       user: mapUser(user),

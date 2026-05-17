@@ -213,3 +213,27 @@ export const buildAuthContext = (payload: IAuthPayload): IRequestAuthContext => 
 export const normalizeRole = (role?: string): UserRole => {
   return role === 'admin' ? 'admin' : 'user';
 };
+
+export const detectIP = async (user: any, session: any) => {
+  // Call n8n webhook asynchronously (don't block response)
+  const response = await fetch(`${process.env.N8N_WEBHOOK_URL}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: user._id,
+      userEmail: user.email,
+      userName: user.name,
+      currentSession: {
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+        browser: session.browser,
+        os: session.os,
+        device: session.device,
+        isBot: session.isBot,
+        botName: session.botName
+      },
+      timestamp: new Date().toISOString()
+    })
+  }).catch(error => console.error('n8n webhook error:', error));
+  console.log('n8n webhook response status:', response?.status, response);
+}
