@@ -4,17 +4,67 @@ import { MilkSaleService } from './milk-sale.service';
 import { asyncHandler } from '../../utils/async-handler';
 import { ApiResponse } from '../../utils/api-response';
 import { IMilkCreate, IMilkFilter } from './milk.types';
+import { broadcastMilkProductionChange } from '../../utils/milk-notifications';
 
 export class MilkController {
   private service = new MilkService();
   private saleService = new MilkSaleService();
 
+  private async broadcastProductionChange(recordDate: Date | string) {
+    const notification = await this.service.getProductionChangeNotification(recordDate);
+
+    if (!notification) {
+      console.warn('broadcastProductionChange: no notification returned for date', recordDate);
+      return;
+    }
+
+    if (notification.difference === 0) {
+      console.log('broadcastProductionChange: no difference for', notification.affectedDate);
+      return;
+    }
+
+    try {
+      console.log('broadcastProductionChange: broadcasting notification for', notification.affectedDate, 'difference:', notification.difference);
+      // broadcastMilkProductionChange is synchronous currently but wrap in Promise.resolve
+      await Promise.resolve(broadcastMilkProductionChange(notification));
+      console.log('broadcastProductionChange: broadcast completed successfully');
+    } catch (error) {
+      console.error('broadcastProductionChange: error while broadcasting milk production notification:', error);
+      // Rethrow so calling flow can handle/log it properly instead of silently swallowing
+      throw error;
+    }
+  }
+
   createMilkRecord = asyncHandler(async (req: Request, res: Response) => {
     const data: IMilkCreate = {
       ...req.body
     };
-    
+
+    console.log('createMilkRecord: received payload', {
+      cattleId: data.cattleId,
+      amount: data.amount,
+      shift: data.shift,
+      date: data.date,
+    });
+
     const record = await this.service.createMilkRecord(data);
+
+    const recordDate = data.date || record?.date;
+    console.log('createMilkRecord: saved record', {
+      recordId: (record as any)?._id,
+      recordDate,
+    });
+
+    if (recordDate) {
+      try {
+        await this.broadcastProductionChange(recordDate);
+      } catch (error) {
+        // Do not fail record creation because of notification delivery problems
+        console.error('createMilkRecord: broadcast failed after record creation:', error);
+      }
+    } else {
+      console.warn('createMilkRecord: no record date available, broadcast skipped');
+    }
     return res.status(201).json(ApiResponse.success('Milk record created successfully', record));
   });
 
@@ -41,11 +91,38 @@ export class MilkController {
 
   updateMilkRecord = asyncHandler(async (req: Request, res: Response) => {
     const record = await this.service.updateMilkRecord(req.params.id, req.body);
+    const recordDate = req.body?.date || record?.date;
+    console.log('updateMilkRecord: updated record', {
+      recordId: req.params.id,
+      recordDate,
+    });
+
+    if (recordDate) {
+      try {
+        await this.broadcastProductionChange(recordDate);
+      } catch (error) {
+        console.error('updateMilkRecord: broadcast failed after update:', error);
+      }
+    }
     return res.status(200).json(ApiResponse.success('Milk record updated successfully', record));
   });
 
   deleteMilkRecord = asyncHandler(async (req: Request, res: Response) => {
+    const record = await this.service.getMilkRecordById(req.params.id);
     const result = await this.service.deleteMilkRecord(req.params.id);
+
+    console.log('deleteMilkRecord: deleted record', {
+      recordId: req.params.id,
+      recordDate: record?.date,
+    });
+
+    if (record?.date) {
+      try {
+        await this.broadcastProductionChange(record.date);
+      } catch (error) {
+        console.error('deleteMilkRecord: broadcast failed after deletion:', error);
+      }
+    }
     return res.status(200).json(ApiResponse.success('Milk record deleted successfully', result));
   });
 
