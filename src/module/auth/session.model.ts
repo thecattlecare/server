@@ -8,6 +8,8 @@ export interface IAuthSessionDocument extends Document {
   browser?: string;
   os?: string;
   device?: string;
+  isBot?: boolean;
+  botName?: string;
   isRevoked: boolean;
   revokedAt?: Date;
   expiresAt: Date;
@@ -46,6 +48,14 @@ const AuthSessionSchema = new Schema<IAuthSessionDocument>(
       trim: true,
     },
     device: {
+      type: String,
+      trim: true,
+    },
+    isBot: {
+      type: Boolean,
+      default: false,
+    },
+    botName: {
       type: String,
       trim: true,
     },

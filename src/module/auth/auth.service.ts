@@ -17,6 +17,7 @@ import {
   buildAuthContext,
   createAccessToken,
   createRefreshToken,
+  detectIP,
   hashPassword,
   hashToken,
   normalizeRole,
@@ -42,6 +43,8 @@ const mapSession = (session: IAuthSessionDocument): IAuthSession => ({
   browser: session.browser,
   os: session.os,
   device: session.device,
+  isBot: session.isBot,
+  botName: session.botName,
   current: false,
   createdAt: session.createdAt,
   updatedAt: session.updatedAt,
@@ -70,6 +73,8 @@ export class AuthService {
       browser: deviceInfo.browser,
       os: deviceInfo.os,
       device: deviceInfo.device,
+      isBot: deviceInfo.isBot,
+      botName: deviceInfo.botName,
       isRevoked: false,
       expiresAt: new Date(Date.now() + TOKEN_LIFETIMES.REFRESH_SECONDS * 1000),
       lastUsedAt: new Date(),
@@ -109,6 +114,10 @@ export class AuthService {
     }
 
     const { session, accessToken, refreshToken } = await this.createSessionForUser(user, req);
+
+    if (process.env.N8N_WEBHOOK_URL) {
+      detectIP(user, session);
+    }
 
     return {
       user: mapUser(user),
