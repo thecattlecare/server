@@ -1,7 +1,9 @@
 import 'dotenv/config';
+import { createServer } from 'http';
 import app from "./app";
 import { connectDatabase } from "./config/db";
 import { seedAdminUser } from "./utils/seed-admin";
+import { initializeMilkNotificationSocket } from './utils/milk-notifications';
 
 const PORT = process.env.PORT || 5000;
 
@@ -17,8 +19,12 @@ const startLocalServer = async () => {
     console.log('✅ Admin user seeded');
 
     // Start server
-    app.listen(PORT, () => {
+    const httpServer = createServer(app);
+    initializeMilkNotificationSocket(httpServer);
+
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🔌 WebSocket notifications on ws://localhost:${PORT}/ws/milk-notifications`);
       console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {

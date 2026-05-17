@@ -1,5 +1,5 @@
 import { MilkRepository } from './milk.repository';
-import { IMilkCreate, IMilkUpdate, IMilkFilter, IMilkDashboardStats } from './milk.types';
+import { IMilkCreate, IMilkUpdate, IMilkFilter, IMilkDashboardStats, IMilkProductionNotification } from './milk.types';
 import { ApiError } from '../../utils/api-error';
 import { Types } from 'mongoose';
 import { Animal } from '../cattle/cattle.model';
@@ -105,6 +105,52 @@ export class MilkService {
 
   async getTodayStats() {
     return this.repository.getDailyStats(new Date());
+  }
+
+  async getProductionChangeNotification(targetDate: Date | string): Promise<IMilkProductionNotification> {
+    const affectedDate = new Date(targetDate);
+    const previousDate = new Date(affectedDate);
+    previousDate.setDate(previousDate.getDate() - 1);
+    // Fetch daily stats for both days. Repository may return null/undefined when no records exist.
+    const [currentStatsRaw, previousStatsRaw] = await Promise.all([
+      this.repository.getDailyStats(affectedDate),
+      this.repository.getDailyStats(previousDate),
+    ]);
+
+    const currentStats = currentStatsRaw || { totalAmount: 0 } as any;
+    const previousStats = previousStatsRaw || { totalAmount: 0 } as any;
+
+    const difference = (currentStats.totalAmount || 0) - (previousStats.totalAmount || 0);
+
+    // Log for debugging when one of the days has no data
+    if (!previousStatsRaw) {
+      console.log('getProductionChangeNotification: previous day has no stats, defaulting to 0 for', previousDate.toISOString().split('T')[0]);
+    }
+    if (!currentStatsRaw) {
+      console.log('getProductionChangeNotification: current day has no stats, defaulting to 0 for', affectedDate.toISOString().split('T')[0]);
+    }
+    const direction: IMilkProductionNotification['direction'] = difference > 0 ? 'increase' : difference < 0 ? 'decrease' : 'stable';
+    const formattedAffectedDate = affectedDate.toISOString().split('T')[0];
+    const formattedPreviousDate = previousDate.toISOString().split('T')[0];
+    const amountChange = Math.abs(difference);
+    const amountLabel = Number.isInteger(amountChange) ? String(amountChange) : amountChange.toFixed(1);
+    const currentLabel = Number.isInteger(currentStats.totalAmount) ? String(currentStats.totalAmount) : currentStats.totalAmount.toFixed(1);
+    const previousLabel = Number.isInteger(previousStats.totalAmount) ? String(previousStats.totalAmount) : previousStats.totalAmount.toFixed(1);
+
+    const message = difference === 0
+      ? `Milk production for ${formattedAffectedDate} is steady at ${currentLabel}kg compared with ${formattedPreviousDate}.`
+      : `Milk production for ${formattedAffectedDate} is ${currentLabel}kg, ${amountLabel}kg ${difference > 0 ? 'higher' : 'lower'} than ${formattedPreviousDate} (${previousLabel}kg).`;
+
+    return {
+      id: `${formattedAffectedDate}-${Date.now()}`,
+      affectedDate: formattedAffectedDate,
+      currentAmount: currentStats.totalAmount,
+      previousAmount: previousStats.totalAmount,
+      difference,
+      direction,
+      message,
+      createdAt: new Date().toISOString(),
+    };
   }
 
   async getTotalAmount(filter: { startDate?: Date; endDate?: Date } = {}) {

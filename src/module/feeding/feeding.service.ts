@@ -12,6 +12,7 @@ import {
   IFeedSupplierQuery,
   IFeedSupplierUpdate,
 } from './feeding.types';
+import { broadcastFeedStockLow } from '../../utils/milk-notifications';
 
 const CRITICAL_THRESHOLD = 50;
 
@@ -46,12 +47,47 @@ export class FeedingService {
 
   async createStock(payload: IFeedStockCreate) {
     const record = await FeedStock.create(payload);
+    // Broadcast if newly created stock is already below threshold
+    try {
+      if (record.stockKg < CRITICAL_THRESHOLD) {
+        broadcastFeedStockLow({
+          id: `${record._id}-${Date.now()}`,
+          feedId: record._id.toString(),
+          name: record.name,
+          brand: record.brand,
+          stockKg: record.stockKg,
+          unitPrice: record.unitPrice,
+          threshold: CRITICAL_THRESHOLD,
+          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('Failed to broadcast feed low notification on create:', err);
+    }
     return FeedStock.findById(record._id).lean();
   }
 
   async updateStock(id: string, payload: IFeedStockUpdate) {
     const record = await FeedStock.findByIdAndUpdate(id, payload, { new: true }).lean();
     if (!record) throw ApiError.NOT_FOUND('Feed stock not found');
+    try {
+      if (record.stockKg < CRITICAL_THRESHOLD) {
+        broadcastFeedStockLow({
+          id: `${record._id}-${Date.now()}`,
+          feedId: record._id.toString(),
+          name: record.name,
+          brand: record.brand,
+          stockKg: record.stockKg,
+          unitPrice: record.unitPrice,
+          threshold: CRITICAL_THRESHOLD,
+          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('Failed to broadcast feed low notification on update:', err);
+    }
     return record;
   }
 
@@ -61,6 +97,23 @@ export class FeedingService {
 
     record.stockKg = Math.max(0, record.stockKg + delta);
     await record.save();
+    try {
+      if (record.stockKg < CRITICAL_THRESHOLD) {
+        broadcastFeedStockLow({
+          id: `${record._id}-${Date.now()}`,
+          feedId: record._id.toString(),
+          name: record.name,
+          brand: record.brand,
+          stockKg: record.stockKg,
+          unitPrice: record.unitPrice,
+          threshold: CRITICAL_THRESHOLD,
+          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('Failed to broadcast feed low notification on adjust:', err);
+    }
     return FeedStock.findById(record._id).lean();
   }
 
