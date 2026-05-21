@@ -10,7 +10,7 @@ const setRefreshCookie = (res: Response, refreshToken: string) => {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 1000 * 60 * 60 * 24 * 3,
-    path: '/api/auth',
+    path: '/',
   });
 };
 
@@ -19,7 +19,7 @@ const clearRefreshCookie = (res: Response) => {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    path: '/api/auth',
+    path: '/',
   });
 };
 
