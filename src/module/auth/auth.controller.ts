@@ -7,21 +7,19 @@ import { AuthService } from './auth.service';
 const setRefreshCookie = (res: Response, refreshToken: string) => {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    sameSite: 'lax',  // More restrictive on production
+    sameSite: 'none',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 1000 * 60 * 60 * 24 * 3,
     path: '/api/auth',
-    domain: process.env.DOMAIN || undefined,
   });
 };
 
 const clearRefreshCookie = (res: Response) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'none',
     secure: process.env.NODE_ENV === 'production',
     path: '/api/auth',
-    domain: process.env.DOMAIN || undefined,
   });
 };
 
