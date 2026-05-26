@@ -57,6 +57,9 @@ export class AuthService {
   private async findUserByEmail(email: string) {
     return User.findOne({ email: email.toLowerCase().trim(), isActive: true }).select('+passwordHash');
   }
+  private async findUserByPhone(phone: string) {
+    return User.findOne({ phone: phone.trim(), isActive: true }).select('+passwordHash');
+  }
 
   private buildDeviceInfo(req: any): ISessionDeviceInfo {
     // Use express-useragent parsed data and request-ip for detailed information
@@ -103,14 +106,25 @@ export class AuthService {
   }
 
   async login(payload: ILoginInput, req: any): Promise<ITokenPairResponse> {
-    const user = await this.findUserByEmail(payload.email);
+    let user: IAuthUserDocument | null = null;
+    if (payload.email) {
+      user = await this.findUserByEmail(payload.email);
+      if (!user || !user.passwordHash) {
+        throw ApiError.UNAUTHORIZED('Invalid email or password');
+      }
+    } else if (payload.phone) {
+      user = await this.findUserByPhone(payload.phone.trim());
+      if (!user || !user.passwordHash) {
+        throw ApiError.UNAUTHORIZED('Invalid phone number or password');
+      }
+    }
     if (!user || !user.passwordHash) {
-      throw ApiError.UNAUTHORIZED('Invalid email or password');
+      throw ApiError.UNAUTHORIZED('Invalid credentials');
     }
 
     const passwordOk = verifyPassword(payload.password, user.passwordHash);
     if (!passwordOk) {
-      throw ApiError.UNAUTHORIZED('Invalid email or password');
+      throw ApiError.UNAUTHORIZED('Invalid credentials');
     }
 
     const { session, accessToken, refreshToken } = await this.createSessionForUser(user, req);
@@ -325,8 +339,12 @@ export class AuthService {
 
   async createUser(payload: ICreateUserInput) {
     const existingUser = await User.findOne({ email: payload.email.toLowerCase().trim() });
+    const existingPhone = await User.findOne({ phone: payload.phone?.trim() });
     if (existingUser) {
       throw ApiError.BAD_REQUEST('Email already exists');
+    }
+    if (existingPhone) {
+      throw ApiError.BAD_REQUEST('Phone number already exists');
     }
 
     const user = await User.create({

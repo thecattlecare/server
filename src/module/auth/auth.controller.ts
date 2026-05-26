@@ -130,10 +130,6 @@ export class AuthController {
   };
 
   createUser = async (req: Request, res: Response) => {
-    if (!req.auth) {
-      throw ApiError.UNAUTHORIZED('Authentication required');
-    }
-
     const validated = authValidation.createUser.parse({ body: req.body });
     const user = await this.service.createUser(validated.body);
     return res.status(201).json(ApiResponse.success('User created successfully', user));

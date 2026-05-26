@@ -29,7 +29,8 @@ export interface IAuthSession {
 }
 
 export interface ILoginInput {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
