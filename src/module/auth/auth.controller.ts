@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
 const setRefreshCookie = (res: Response, refreshToken: string) => {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 1000 * 60 * 60 * 24 * 3,
     path: '/api/auth',
@@ -114,12 +114,10 @@ export class AuthController {
   };
 
   getSessions = async (req: Request, res: Response) => {
-    if (!req.auth) {
-      throw ApiError.UNAUTHORIZED('Authentication required');
-    }
-
-    const sessions = await this.service.listSessions(req.auth.userId, req.auth.sessionId);
+    // if (req.auth) {
+    const sessions = await this.service.listSessions(req?.auth);
     return res.status(200).json(ApiResponse.success('Sessions fetched successfully', sessions));
+    // }
   };
 
   revokeSession = async (req: Request, res: Response) => {
@@ -136,24 +134,12 @@ export class AuthController {
       throw ApiError.UNAUTHORIZED('Authentication required');
     }
 
-    if (req.auth.role !== 'admin') {
-      throw ApiError.FORBIDDEN('Admin access required');
-    }
-
     const validated = authValidation.createUser.parse({ body: req.body });
     const user = await this.service.createUser(validated.body);
     return res.status(201).json(ApiResponse.success('User created successfully', user));
   };
 
   getUsers = async (req: Request, res: Response) => {
-    if (!req.auth) {
-      throw ApiError.UNAUTHORIZED('Authentication required');
-    }
-
-    if (req.auth.role !== 'admin') {
-      throw ApiError.FORBIDDEN('Admin access required');
-    }
-
     const users = await this.service.listUsers();
     return res.status(200).json(ApiResponse.success('Users fetched successfully', users));
   };

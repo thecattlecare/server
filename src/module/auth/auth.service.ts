@@ -12,9 +12,9 @@ import {
   ILoginInput,
   ITokenPairResponse,
   ISessionDeviceInfo,
+  IRequestAuthContext,
 } from './auth.types';
 import {
-  buildAuthContext,
   createAccessToken,
   createRefreshToken,
   detectIP,
@@ -201,8 +201,30 @@ export class AuthService {
     };
   }
 
-  async listSessions(userId: string, currentSessionId?: string) {
-    const sessions = await AuthSession.find({ userId: new Types.ObjectId(userId) })
+  async listSessions(authContext?: IRequestAuthContext): Promise<{ sessions: IAuthSession[]; currentSessionId: string | null }> {
+    if (authContext?.role === 'admin') {
+      const sessions = await AuthSession.find({}).sort({ createdAt: -1 }).lean().populate('userId', 'name email role phone');
+      return {
+        sessions: sessions.map((session) => ({
+          _id: session._id.toString(),
+          userId: session.userId,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          browser: session.browser,
+          os: session.os,
+          device: session.device,
+          current: authContext?.sessionId ? session._id.toString() === authContext.sessionId : false,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          lastUsedAt: session.lastUsedAt,
+          expiresAt: session.expiresAt,
+          revokedAt: session.revokedAt,
+        })) as IAuthSession[],
+        currentSessionId: authContext?.sessionId || null,
+      };
+    }
+
+    const sessions = await AuthSession.find({ userId: new Types.ObjectId(authContext?.userId as string) })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -215,14 +237,14 @@ export class AuthService {
         browser: session.browser,
         os: session.os,
         device: session.device,
-        current: currentSessionId ? session._id.toString() === currentSessionId : false,
+        current: authContext?.sessionId ? session._id.toString() === authContext.sessionId : false,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
         lastUsedAt: session.lastUsedAt,
         expiresAt: session.expiresAt,
         revokedAt: session.revokedAt,
       })) as IAuthSession[],
-      currentSessionId: currentSessionId || null,
+      currentSessionId: authContext?.sessionId || null,
     };
   }
 
@@ -310,6 +332,7 @@ export class AuthService {
     const user = await User.create({
       name: payload.name.trim(),
       email: payload.email.toLowerCase().trim(),
+      phone: payload.phone?.trim(),
       passwordHash: hashPassword(payload.password),
       role: normalizeRole(payload.role),
       isActive: true,
