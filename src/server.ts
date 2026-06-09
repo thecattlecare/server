@@ -2,8 +2,9 @@ import 'dotenv/config';
 import { createServer } from 'http';
 import app from "./app";
 import { connectDatabase } from "./config/db";
-import { seedAdminUser } from "./utils/seed-admin";
+// import { seedAdminUser } from "./utils/seed-admin";
 import { initializeMilkNotificationSocket } from './utils/milk-notifications';
+import { initializeAllSchedulers } from './schedulers/session-cleanup.scheduler';
 
 const PORT = process.env.PORT || 5000;
 
@@ -14,9 +15,11 @@ const startLocalServer = async () => {
     await connectDatabase();
     console.log('✅ MongoDB connected');
 
+    initializeAllSchedulers();
+
     // Seed admin user
-    await seedAdminUser();
-    console.log('✅ Admin user seeded');
+    // await seedAdminUser();
+    // console.log('✅ Admin user seeded');
 
     // Start server
     const httpServer = createServer(app);

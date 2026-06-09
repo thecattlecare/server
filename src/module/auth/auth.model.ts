@@ -4,6 +4,7 @@ import { UserRole } from './auth.types';
 export interface IAuthUserDocument extends Document {
   name: string;
   email: string;
+  phone?: string;
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
@@ -27,6 +28,11 @@ const AuthUserSchema = new Schema<IAuthUserDocument>(
       lowercase: true,
       trim: true,
       index: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [10, 'Phone number cannot exceed 10 characters'],
     },
     passwordHash: {
       type: String,

@@ -12,9 +12,9 @@ import {
   ILoginInput,
   ITokenPairResponse,
   ISessionDeviceInfo,
+  IRequestAuthContext,
 } from './auth.types';
 import {
-  buildAuthContext,
   createAccessToken,
   createRefreshToken,
   detectIP,
@@ -56,6 +56,9 @@ const mapSession = (session: IAuthSessionDocument): IAuthSession => ({
 export class AuthService {
   private async findUserByEmail(email: string) {
     return User.findOne({ email: email.toLowerCase().trim(), isActive: true }).select('+passwordHash');
+  }
+  private async findUserByPhone(phone: string) {
+    return User.findOne({ phone: phone.trim(), isActive: true }).select('+passwordHash');
   }
 
   private buildDeviceInfo(req: any): ISessionDeviceInfo {
@@ -103,14 +106,25 @@ export class AuthService {
   }
 
   async login(payload: ILoginInput, req: any): Promise<ITokenPairResponse> {
-    const user = await this.findUserByEmail(payload.email);
+    let user: IAuthUserDocument | null = null;
+    if (payload.email) {
+      user = await this.findUserByEmail(payload.email);
+      if (!user || !user.passwordHash) {
+        throw ApiError.UNAUTHORIZED('Invalid email or password');
+      }
+    } else if (payload.phone) {
+      user = await this.findUserByPhone(payload.phone.trim());
+      if (!user || !user.passwordHash) {
+        throw ApiError.UNAUTHORIZED('Invalid phone number or password');
+      }
+    }
     if (!user || !user.passwordHash) {
-      throw ApiError.UNAUTHORIZED('Invalid email or password');
+      throw ApiError.UNAUTHORIZED('Invalid credentials');
     }
 
     const passwordOk = verifyPassword(payload.password, user.passwordHash);
     if (!passwordOk) {
-      throw ApiError.UNAUTHORIZED('Invalid email or password');
+      throw ApiError.UNAUTHORIZED('Invalid credentials');
     }
 
     const { session, accessToken, refreshToken } = await this.createSessionForUser(user, req);
@@ -201,8 +215,30 @@ export class AuthService {
     };
   }
 
-  async listSessions(userId: string, currentSessionId?: string) {
-    const sessions = await AuthSession.find({ userId: new Types.ObjectId(userId) })
+  async listSessions(authContext?: IRequestAuthContext): Promise<{ sessions: IAuthSession[]; currentSessionId: string | null }> {
+    if (authContext?.role === 'admin') {
+      const sessions = await AuthSession.find({}).sort({ createdAt: -1 }).lean().populate('userId', 'name email role phone');
+      return {
+        sessions: sessions.map((session) => ({
+          _id: session._id.toString(),
+          userId: session.userId,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          browser: session.browser,
+          os: session.os,
+          device: session.device,
+          current: authContext?.sessionId ? session._id.toString() === authContext.sessionId : false,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          lastUsedAt: session.lastUsedAt,
+          expiresAt: session.expiresAt,
+          revokedAt: session.revokedAt,
+        })) as IAuthSession[],
+        currentSessionId: authContext?.sessionId || null,
+      };
+    }
+
+    const sessions = await AuthSession.find({ userId: new Types.ObjectId(authContext?.userId as string) })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -215,14 +251,14 @@ export class AuthService {
         browser: session.browser,
         os: session.os,
         device: session.device,
-        current: currentSessionId ? session._id.toString() === currentSessionId : false,
+        current: authContext?.sessionId ? session._id.toString() === authContext.sessionId : false,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
         lastUsedAt: session.lastUsedAt,
         expiresAt: session.expiresAt,
         revokedAt: session.revokedAt,
       })) as IAuthSession[],
-      currentSessionId: currentSessionId || null,
+      currentSessionId: authContext?.sessionId || null,
     };
   }
 
@@ -303,13 +339,18 @@ export class AuthService {
 
   async createUser(payload: ICreateUserInput) {
     const existingUser = await User.findOne({ email: payload.email.toLowerCase().trim() });
+    const existingPhone = await User.findOne({ phone: payload.phone?.trim() });
     if (existingUser) {
       throw ApiError.BAD_REQUEST('Email already exists');
+    }
+    if (existingPhone) {
+      throw ApiError.BAD_REQUEST('Phone number already exists');
     }
 
     const user = await User.create({
       name: payload.name.trim(),
       email: payload.email.toLowerCase().trim(),
+      phone: payload.phone?.trim(),
       passwordHash: hashPassword(payload.password),
       role: normalizeRole(payload.role),
       isActive: true,

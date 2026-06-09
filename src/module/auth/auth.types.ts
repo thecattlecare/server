@@ -12,7 +12,7 @@ export interface IAuthUser {
 
 export interface IAuthSession {
   _id: string;
-  userId: string;
+  userId: string | Types.ObjectId;
   ipAddress?: string;
   userAgent?: string;
   browser?: string;
@@ -29,13 +29,15 @@ export interface IAuthSession {
 }
 
 export interface ILoginInput {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
 export interface ICreateUserInput {
   name: string;
   email: string;
+  phone?: string;
   password: string;
   role?: UserRole;
 }
