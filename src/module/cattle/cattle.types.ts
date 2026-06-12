@@ -65,6 +65,7 @@ export const cattleQuerySchema = z.object({
   tag: z.string().optional(),
   breed: z.string().optional(),
   gender: genderEnum.optional(),
+  group: groupEnum.optional(),
   isActive: z
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'boolean' ? val : val === 'true'))
