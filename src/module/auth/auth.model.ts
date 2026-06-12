@@ -8,6 +8,7 @@ export interface IAuthUserDocument extends Document {
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  salary?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +48,11 @@ const AuthUserSchema = new Schema<IAuthUserDocument>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    salary: {
+      type: Number,
+      min: [0, 'Salary cannot be negative'],
+      default: 0,
     },
   },
   {

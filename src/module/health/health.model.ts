@@ -4,7 +4,9 @@ import { DiseaseStatus, VaccinationStatus } from './health.types';
 export interface IDiseaseRecord extends Document {
   animalId: mongoose.Types.ObjectId;
   disease: string;
+  treatment?: string;
   medicine?: string;
+  treatmentCost?: number;
   status: DiseaseStatus;
   startDate: Date;
   notes?: string;
@@ -38,7 +40,9 @@ const DiseaseRecordSchema = new Schema<IDiseaseRecord>(
   {
     animalId: { type: Schema.Types.ObjectId, ref: 'Animal', required: true, index: true },
     disease: { type: String, required: true, trim: true },
+    treatment: { type: String, trim: true, default: '' },
     medicine: { type: String, trim: true, default: '-' },
+    treatmentCost: { type: Number, min: 0, default: 0 },
     status: {
       type: String,
       enum: ['Active', 'Critical', 'Chronic', 'Recovered'],
