@@ -16,7 +16,7 @@ router.delete('/sessions/current', authenticateRequest, asyncHandler(controller.
 router.delete('/sessions/others', authenticateRequest, asyncHandler(controller.logoutOthers));
 router.delete('/sessions/all', authenticateRequest, asyncHandler(controller.logoutAll));
 router.delete('/sessions/:id', authenticateRequest, asyncHandler(controller.revokeSession));
-router.get('/users', authenticateRequest, authorizeAdmin, asyncHandler(controller.getUsers));
+router.get('/users', authenticateRequest, asyncHandler(controller.getUsers));
 router.post('/users', authenticateRequest, authorizeAdmin, asyncHandler(controller.createUser));
 
 export default router;
