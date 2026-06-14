@@ -32,7 +32,20 @@ export class TaskService {
       completionHistory: []
     };
 
-    const task = await this.taskRepository.create(taskData as any);
+    const result = await this.taskRepository.create(taskData as any);
+    const bb = result
+    const task = await this.taskRepository.findById(result._id, {
+      populate: [
+        { path: 'assignedTo', select: 'name email' },
+        { path: 'assignedBy', select: 'name email' }
+      ]
+    });
+
+    if (!task) {
+      // Should not happen, but guard against null from repository
+      throw ApiError.NOT_FOUND('Task not found after creation. Refresh the page to get the updated task list or try again.');
+    }
+
     return task;
   }
 
@@ -121,11 +134,26 @@ export class TaskService {
     return this.taskRepository.findAccessibleTasks(userId);
   }
 
+  private resolveTaskUserId(user?: string | unknown): string | undefined {
+    if (!user) return undefined;
+    if (typeof user === 'string') return user;
+    if (typeof user === 'object' && user !== null && '_id' in user) {
+      const id = (user as { _id?: unknown })._id;
+      if (id) return String(id);
+    }
+    return String(user);
+  }
+
   /**
    * Get task by ID
    */
   async getTaskById(id: string, userId?: string): Promise<ITask> {
-    const task = await this.taskRepository.findById(id);
+    const task = await this.taskRepository.findById(id, {
+      populate: [
+        { path: 'assignedTo', select: 'name email' },
+        { path: 'assignedBy', select: 'name email' }
+      ]
+    });
 
     if (!task) {
       throw ApiError.NOT_FOUND('Task not found');
@@ -133,13 +161,15 @@ export class TaskService {
 
     // Check access permissions
     if (userId) {
+      const assignedToId = this.resolveTaskUserId(task.assignedTo);
+      const assignedById = this.resolveTaskUserId(task.assignedBy);
       const hasAccess =
-        task.assignedTo === userId ||
-        task.assignedBy === userId ||
+        assignedToId === userId ||
+        assignedById === userId ||
         task.visibility === 'public';
 
       if (!hasAccess) {
-        throw ApiError.UNAUTHORIZED('You do not have permission to view this task');
+        throw ApiError.UNAUTHORIZED('Access denied to this task');
       }
     }
 
@@ -157,7 +187,8 @@ export class TaskService {
     const task = await this.getTaskById(id, userId);
 
     // Only the user who assigned the task can update it
-    if (task.assignedBy !== userId) {
+    const assignedById = this.resolveTaskUserId(task.assignedBy);
+    if (assignedById !== userId) {
       throw ApiError.UNAUTHORIZED('Only the task creator can update it');
     }
 
@@ -174,8 +205,9 @@ export class TaskService {
     if (!updated) {
       throw ApiError.NOT_FOUND('Task not found');
     }
+    const res = await this.getTaskById(updated._id, userId);
 
-    return updated;
+    return res;
   }
 
   /**
@@ -188,8 +220,11 @@ export class TaskService {
   ): Promise<ITask> {
     const task = await this.getTaskById(id, userId);
 
+    const assignedToId = this.resolveTaskUserId(task.assignedTo);
+    const assignedById = this.resolveTaskUserId(task.assignedBy);
+
     // Only the assigned person or the assigner can mark as complete
-    if (task.assignedTo !== userId && task.assignedBy !== userId) {
+    if (assignedToId !== userId && assignedById !== userId) {
       throw ApiError.UNAUTHORIZED('You do not have permission to update this task');
     }
 
@@ -208,8 +243,10 @@ export class TaskService {
   async deleteTask(id: string, userId: string | undefined): Promise<void> {
     const task = await this.getTaskById(id, userId);
 
+    const assignedById = this.resolveTaskUserId(task.assignedBy);
+
     // Only the user who assigned the task can delete it
-    if (task.assignedBy !== userId) {
+    if (assignedById !== userId) {
       throw ApiError.UNAUTHORIZED('Only the task creator can delete it');
     }
 
