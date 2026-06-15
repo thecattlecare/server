@@ -37,9 +37,11 @@ export class HealthService {
 
     return this.repository.createDiseaseRecord({
       ...payload,
+      treatment: payload.treatment || payload.medicine || '',
       animalId: new Types.ObjectId(payload.animalId as string),
       startDate: payload.startDate instanceof Date ? payload.startDate : new Date(payload.startDate),
       status: payload.status || 'Active',
+      treatmentCost: Number(payload.treatmentCost ?? 0),
     } as any);
   }
 
@@ -50,6 +52,7 @@ export class HealthService {
 
     const updated = await this.repository.updateDiseaseRecord(id, {
       ...payload,
+      treatment: payload.treatment ?? payload.medicine,
       animalId: payload.animalId ? new Types.ObjectId(payload.animalId as string) : undefined,
       startDate:
         payload.startDate !== undefined
@@ -57,6 +60,7 @@ export class HealthService {
             ? payload.startDate
             : new Date(payload.startDate)
           : undefined,
+      treatmentCost: payload.treatmentCost !== undefined ? Number(payload.treatmentCost) : undefined,
     } as any);
 
     if (!updated) {

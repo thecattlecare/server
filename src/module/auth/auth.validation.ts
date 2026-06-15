@@ -29,6 +29,7 @@ export const authValidation = {
       phone: z.string().length(10, 'Phone number must be exactly 10 characters').startsWith('3').optional(),
       password: z.string().min(6, 'Password must be at least 6 characters'),
       role: z.enum(['admin', 'user']).optional(),
+      salary: z.number().min(0).optional(),
     }),
   }),
 };

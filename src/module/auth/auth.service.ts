@@ -33,6 +33,7 @@ const mapUser = (user: IAuthUserDocument): IAuthUser => ({
   email: user.email,
   role: user.role,
   isActive: user.isActive,
+  salary: user.salary,
 });
 
 const mapSession = (session: IAuthSessionDocument): IAuthSession => ({
@@ -354,6 +355,7 @@ export class AuthService {
       passwordHash: hashPassword(payload.password),
       role: normalizeRole(payload.role),
       isActive: true,
+      salary: Number(payload.salary ?? 0),
     });
 
     return mapUser(user);

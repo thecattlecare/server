@@ -8,6 +8,7 @@ export interface IAuthUser {
   email: string;
   role: UserRole;
   isActive: boolean;
+  salary?: number;
 }
 
 export interface IAuthSession {
@@ -40,6 +41,7 @@ export interface ICreateUserInput {
   phone?: string;
   password: string;
   role?: UserRole;
+  salary?: number;
 }
 
 export interface IAuthTokens {
