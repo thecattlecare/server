@@ -4,6 +4,8 @@ import cors from "cors";
 import cookieParser from 'cookie-parser';
 import requestIp from 'request-ip';
 import useragent from 'express-useragent';
+import staffRoutes from './module/staff/staff.route';
+// import staffRoutes from './module/staff/staff.route.test';
 import cattleRoutes from "./module/cattle/cattle.route";
 import milkRoutes from './module/milk/milk.route';
 import healthRoutes from './module/health/health.route';
@@ -16,10 +18,20 @@ import { ApiError } from './utils/api-error';
 import { broadcastMilkProductionChange } from './utils/milk-notifications';
 
 const app = express();
-
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 // Middleware
 app.use(express.json({ limit: '5mb' })); // Added limit for larger payloads
 app.use(cookieParser());
+app.use('/api/staff', staffRoutes);
 
 // IP Detection middleware
 app.use(requestIp.mw());
