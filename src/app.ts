@@ -5,7 +5,6 @@ import cookieParser from 'cookie-parser';
 import requestIp from 'request-ip';
 import useragent from 'express-useragent';
 import staffRoutes from './module/staff/staff.route';
-// import staffRoutes from './module/staff/staff.route.test';
 import cattleRoutes from "./module/cattle/cattle.route";
 import milkRoutes from './module/milk/milk.route';
 import healthRoutes from './module/health/health.route';
@@ -19,29 +18,10 @@ import { ApiError } from './utils/api-error';
 import { broadcastMilkProductionChange } from './utils/milk-notifications';
 
 const app = express();
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-// Middleware
-app.use(express.json({ limit: '5mb' })); // Added limit for larger payloads
-app.use(cookieParser());
-app.use('/api/staff', staffRoutes);
 
-// IP Detection middleware
-app.use(requestIp.mw());
-
-// User Agent parsing middleware
-app.use(useragent.express());
-
-// CORS configuration for both dev and production
+// 1. CORS Configuration (Moved to the top where it belongs)
 const allowedOrigins = [
+  'http://localhost:3000', // Added explicitly just in case FRONTEND_URL isn't set locally
   process.env.FRONTEND_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
 ].filter(Boolean);
@@ -58,9 +38,17 @@ app.use(cors({
     }
   },
   credentials: true,
+  methods: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+  allowedHeaders: 'Content-Type, Authorization, X-Requested-With, Accept'
 }));
 
-// Health check endpoint (useful for Vercel)
+// 2. Other Middlewares
+app.use(express.json({ limit: '5mb' }));
+app.use(cookieParser());
+app.use(requestIp.mw());
+app.use(useragent.express());
+
+// 3. Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -69,18 +57,19 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Dev-only test route to broadcast a synthetic milk notification (public in development)
+// 4. Routes
+app.use('/api/staff', staffRoutes);
+app.use('/api/auth', authRoutes);
+
+// Dev-only test route
 if (process.env.NODE_ENV !== 'production') {
   app.post('/api/dev/notify', (req, res) => {
     const payload = req.body;
     if (!payload) {
       return res.status(400).json(ApiResponse.error('Missing notification payload'));
     }
-
     try {
       console.log('DEV /api/dev/notify received payload:', payload);
-      // Broadcast without requiring authentication in development for easy testing
-      // Note: keep this guarded by NODE_ENV !== 'production'
       broadcastMilkProductionChange(payload);
       return res.status(200).json(ApiResponse.success('Notification broadcasted', payload));
     } catch (err) {
@@ -90,12 +79,8 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Routes
-app.use('/api/auth', authRoutes);
-
 // Protected routes
 app.use('/api', authenticateRequest);
-
 app.use('/api/cattle', cattleRoutes);
 app.use('/api/milk', milkRoutes);
 app.use('/api/health', healthRoutes);
@@ -110,19 +95,14 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // Log error in development
   if (process.env.NODE_ENV === 'development') {
     console.error('Error:', err);
   }
-
   if (res.headersSent) {
     return next(err);
   }
-
   const statusCode = err?.statusCode || err?.status || 500;
   const message = err?.message || 'Internal server error';
-
-  // Don't expose stack traces in production
   const response = process.env.NODE_ENV === 'production'
     ? ApiResponse.error(message)
     : ApiResponse.error(message, err instanceof ApiError ? undefined : err?.stack);
