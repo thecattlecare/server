@@ -165,7 +165,7 @@ export class MilkController {
 
   getBulkStats = asyncHandler(async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
-    
+
     if (!startDate || !endDate) {
       return res.status(400).json(ApiResponse.error('Start date and end date are required'));
     }
@@ -203,5 +203,10 @@ export class MilkController {
   getLast12MonthsProduction = asyncHandler(async (req: Request, res: Response) => {
     const data = await this.service.getLast12MonthsProduction();
     return res.status(200).json(ApiResponse.success('Last 12 months production fetched successfully', data));
+  });
+
+  getSessionStats = asyncHandler(async (req: Request, res: Response) => {
+    const stats = await this.service.getLatestSessionStats();
+    return res.status(200).json(ApiResponse.success('Latest session stats fetched successfully', stats));
   });
 }

@@ -11,6 +11,7 @@ import milkRoutes from './module/milk/milk.route';
 import healthRoutes from './module/health/health.route';
 import feedingRoutes from './module/feeding/feeding.route';
 import reportsRoutes from './module/reports/reports.route';
+import taskRoutes from './module/task/task.route';
 import authRoutes from './module/auth/auth.route';
 import { authenticateRequest } from './module/auth/auth.middleware';
 import { ApiResponse } from './utils/api-response';
@@ -100,6 +101,7 @@ app.use('/api/milk', milkRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/feeding', feedingRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // 404 handler
 app.use((req, res) => {

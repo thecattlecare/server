@@ -1,6 +1,7 @@
 // src/schedulers/session-cleanup.scheduler.ts
 import cron from 'node-cron';
 import { AuthSession } from '../module/auth/session.model';
+import { initializeTaskSchedulers } from './task-reset.scheduler';
 
 export function initializeSessionCleanup() {
   // Run every day at midnight (you can adjust the schedule)
@@ -28,11 +29,11 @@ export function initializeSessionCleanup() {
     }
   });
 
-  console.log('Session cleanup scheduler initialized (runs daily at midnight)');
+  console.log('✓ Session cleanup scheduler initialized (runs daily at midnight)');
 }
 
 // Optional: Add more cleanup jobs here
 export function initializeAllSchedulers() {
   initializeSessionCleanup();
-  // initializeOtherCleanupJobs();
+  initializeTaskSchedulers();
 }
