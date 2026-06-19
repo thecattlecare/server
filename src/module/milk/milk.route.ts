@@ -27,6 +27,9 @@ router.get('/sales/:id', saleController.getMilkSaleById);
 router.patch('/sales/:id', saleController.updateMilkSale);
 router.delete('/sales/:id', saleController.deleteMilkSale);
 
+// Prediction route
+router.post('/predict-farm', controller.predictFarmMilk);
+
 // CRUD routes
 router.post(
   '/',

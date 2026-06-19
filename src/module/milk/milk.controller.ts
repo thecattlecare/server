@@ -209,4 +209,29 @@ export class MilkController {
     const stats = await this.service.getLatestSessionStats();
     return res.status(200).json(ApiResponse.success('Latest session stats fetched successfully', stats));
   });
+
+  predictFarmMilk = asyncHandler(async (req: Request, res: Response) => {
+    // 1. Point to your Render URL (store this in your backend .env under PYTHON_AGENT_URL)
+    const agentUrl = process.env.PYTHON_AGENT_URL || 'https://milk-prediction-agent.onrender.com';
+
+    console.log(`predictFarmMilk: sending prediction request to hosted agent at ${agentUrl}/predict`);
+
+    try {
+      const response = await fetch(`${agentUrl}/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Agent returned status code ${response.status}`);
+      }
+      const result = await response.json();
+      return res.status(200).json(ApiResponse.success('Farm-wide milk prediction generated successfully', result));
+    } catch (err: any) {
+      console.error('predictFarmMilk connection error:', err);
+      return res.status(500).json(ApiResponse.error(`Hosted prediction agent failed: ${err.message}`));
+    }
+  });
 }
