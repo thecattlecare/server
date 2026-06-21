@@ -4,7 +4,7 @@ import { MilkSaleService } from './milk-sale.service';
 import { asyncHandler } from '../../utils/async-handler';
 import { ApiResponse } from '../../utils/api-response';
 import { IMilkCreate, IMilkFilter } from './milk.types';
-import { broadcastMilkProductionChange } from '../../utils/milk-notifications';
+import { broadcastNotification } from '../../utils/notifications';
 
 export class MilkController {
   private service = new MilkService();
@@ -18,15 +18,9 @@ export class MilkController {
       return;
     }
 
-    if (notification.difference === 0) {
-      console.log('broadcastProductionChange: no difference for', notification.affectedDate);
-      return;
-    }
-
     try {
-      console.log('broadcastProductionChange: broadcasting notification for', notification.affectedDate, 'difference:', notification.difference);
       // broadcastMilkProductionChange is synchronous currently but wrap in Promise.resolve
-      await Promise.resolve(broadcastMilkProductionChange(notification));
+      await Promise.resolve(broadcastNotification('milk', notification));
       console.log('broadcastProductionChange: broadcast completed successfully');
     } catch (error) {
       console.error('broadcastProductionChange: error while broadcasting milk production notification:', error);

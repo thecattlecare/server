@@ -3,6 +3,7 @@ import { IMilkCreate, IMilkUpdate, IMilkFilter, IMilkDashboardStats, IMilkProduc
 import { ApiError } from '../../utils/api-error';
 import { Types } from 'mongoose';
 import { Animal } from '../cattle/cattle.model';
+import { INotification } from '../../utils/types';
 
 export class MilkService {
   private repository = new MilkRepository();
@@ -107,7 +108,7 @@ export class MilkService {
     return this.repository.getDailyStats(new Date());
   }
 
-  async getProductionChangeNotification(targetDate: Date | string): Promise<IMilkProductionNotification> {
+  async getProductionChangeNotification(targetDate: Date | string): Promise<INotification> {
     const affectedDate = new Date(targetDate);
     const previousDate = new Date(affectedDate);
     previousDate.setDate(previousDate.getDate() - 1);
@@ -129,7 +130,7 @@ export class MilkService {
     if (!currentStatsRaw) {
       console.log('getProductionChangeNotification: current day has no stats, defaulting to 0 for', affectedDate.toISOString().split('T')[0]);
     }
-    const direction: IMilkProductionNotification['direction'] = difference > 0 ? 'increase' : difference < 0 ? 'decrease' : 'stable';
+    const direction: INotification['direction'] = difference > 0 ? 'positive' : difference < 0 ? 'negative' : 'neutral';
     const formattedAffectedDate = affectedDate.toISOString().split('T')[0];
     const formattedPreviousDate = previousDate.toISOString().split('T')[0];
     const amountChange = Math.abs(difference);
@@ -143,10 +144,10 @@ export class MilkService {
 
     return {
       id: `${formattedAffectedDate}-${Date.now()}`,
-      affectedDate: formattedAffectedDate,
-      currentAmount: currentStats.totalAmount,
-      previousAmount: previousStats.totalAmount,
-      difference,
+      // affectedDate: formattedAffectedDate,
+      // currentAmount: currentStats.totalAmount,
+      // previousAmount: previousStats.totalAmount,
+      // difference,
       direction,
       message,
       createdAt: new Date().toISOString(),
