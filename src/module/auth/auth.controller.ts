@@ -17,7 +17,7 @@ const setRefreshCookie = (res: Response, refreshToken: string) => {
 const clearRefreshCookie = (res: Response) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/api/auth',
   });
