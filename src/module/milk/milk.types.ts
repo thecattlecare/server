@@ -64,3 +64,14 @@ export interface IMilkDashboardStats {
     averagePerDay: number;
   }>;
 }
+
+export interface IMilkProductionNotification {
+  id: string;
+  affectedDate: string;
+  currentAmount: number;
+  previousAmount: number;
+  difference: number;
+  direction: 'increase' | 'decrease' | 'stable';
+  message: string;
+  createdAt: string;
+}

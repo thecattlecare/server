@@ -1,8 +1,9 @@
 import { MilkRepository } from './milk.repository';
-import { IMilkCreate, IMilkUpdate, IMilkFilter, IMilkDashboardStats } from './milk.types';
+import { IMilkCreate, IMilkUpdate, IMilkFilter, IMilkDashboardStats, IMilkProductionNotification } from './milk.types';
 import { ApiError } from '../../utils/api-error';
 import { Types } from 'mongoose';
 import { Animal } from '../cattle/cattle.model';
+import { INotification } from '../../utils/types';
 
 export class MilkService {
   private repository = new MilkRepository();
@@ -22,7 +23,7 @@ export class MilkService {
     // Check for duplicate record (same cattle, shift, date)
     const startOfDay = new Date(data.date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(data.date);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -33,7 +34,7 @@ export class MilkService {
     });
 
     if (existingRecord) {
-      throw new ApiError(400, `Milk record for ${data.shift} shift already exists for this date`);
+      throw new ApiError(400, 'Duplication of milk at the same date, time, and same cow is not allowed');
     }
 
     const milkDate = data.date instanceof Date ? data.date : new Date(data.date);
@@ -70,7 +71,7 @@ export class MilkService {
     if (data.date || data.shift) {
       const startOfDay = new Date(data.date || record.date);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(data.date || record.date);
       endOfDay.setHours(23, 59, 59, 999);
 
@@ -107,21 +108,71 @@ export class MilkService {
     return this.repository.getDailyStats(new Date());
   }
 
+  async getProductionChangeNotification(targetDate: Date | string): Promise<INotification> {
+    const affectedDate = new Date(targetDate);
+    const previousDate = new Date(affectedDate);
+    previousDate.setDate(previousDate.getDate() - 1);
+    // Fetch daily stats for both days. Repository may return null/undefined when no records exist.
+    const [currentStatsRaw, previousStatsRaw] = await Promise.all([
+      this.repository.getDailyStats(affectedDate),
+      this.repository.getDailyStats(previousDate),
+    ]);
+
+    const currentStats = currentStatsRaw || { totalAmount: 0 } as any;
+    const previousStats = previousStatsRaw || { totalAmount: 0 } as any;
+
+    const difference = (currentStats.totalAmount || 0) - (previousStats.totalAmount || 0);
+
+    // Log for debugging when one of the days has no data
+    if (!previousStatsRaw) {
+      console.log('getProductionChangeNotification: previous day has no stats, defaulting to 0 for', previousDate.toISOString().split('T')[0]);
+    }
+    if (!currentStatsRaw) {
+      console.log('getProductionChangeNotification: current day has no stats, defaulting to 0 for', affectedDate.toISOString().split('T')[0]);
+    }
+    const direction: INotification['direction'] = difference > 0 ? 'positive' : difference < 0 ? 'negative' : 'neutral';
+    const formattedAffectedDate = affectedDate.toISOString().split('T')[0];
+    const formattedPreviousDate = previousDate.toISOString().split('T')[0];
+    const amountChange = Math.abs(difference);
+    const amountLabel = Number.isInteger(amountChange) ? String(amountChange) : amountChange.toFixed(1);
+    const currentLabel = Number.isInteger(currentStats.totalAmount) ? String(currentStats.totalAmount) : currentStats.totalAmount.toFixed(1);
+    const previousLabel = Number.isInteger(previousStats.totalAmount) ? String(previousStats.totalAmount) : previousStats.totalAmount.toFixed(1);
+
+    const message = difference === 0
+      ? `Milk production for ${formattedAffectedDate} is steady at ${currentLabel}kg compared with ${formattedPreviousDate}.`
+      : `Milk production for ${formattedAffectedDate} is ${currentLabel}kg, ${amountLabel}kg ${difference > 0 ? 'higher' : 'lower'} than ${formattedPreviousDate} (${previousLabel}kg).`;
+
+    return {
+      id: `${formattedAffectedDate}-${Date.now()}`,
+      // affectedDate: formattedAffectedDate,
+      // currentAmount: currentStats.totalAmount,
+      // previousAmount: previousStats.totalAmount,
+      // difference,
+      direction,
+      message,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  async getTotalAmount(filter: { startDate?: Date; endDate?: Date } = {}) {
+    return this.repository.getTotalAmount(filter);
+  }
+
   async getDashboardStats(): Promise<IMilkDashboardStats> {
     const today = new Date();
-    
+
     // Start of today
     const startOfToday = new Date(today);
     startOfToday.setHours(0, 0, 0, 0);
-    
+
     // Start of week (last 7 days)
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - 7);
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     // Start of month
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
+
     // End of today
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
@@ -147,7 +198,7 @@ export class MilkService {
     const monthCount = monthRecords.length;
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const daysSoFar = today.getDate();
-    
+
     // Projected monthly total
     const projectedTotal = daysSoFar > 0 ? (monthTotal / daysSoFar) * daysInMonth : 0;
 
@@ -216,6 +267,77 @@ export class MilkService {
         averagePerDay: records.data.length / days,
         recordCount: records.data.length
       }
+    };
+  }
+
+  async getLast14DaysProduction() {
+    return this.repository.getLast14DaysProduction();
+  }
+
+  async getLast12WeeksProduction() {
+    return this.repository.getLast12WeeksProduction();
+  }
+
+  async getLast12MonthsProduction() {
+    return this.repository.getLast12MonthsProduction();
+  }
+
+  async getLatestSessionStats() {
+    const now = new Date();
+
+    const formatted = (d: Date) => d.toISOString().split('T')[0];
+
+    const startOfDay = (d: Date) => {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+
+    const prevDate = (d: Date) => {
+      const x = new Date(d);
+      x.setDate(x.getDate() - 1);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+
+    // Decide whether today's Morning/Evening sessions have occurred yet.
+    const hour = now.getHours();
+    const morningHasOccurred = hour >= 12; // assume morning session occurs before noon
+    const eveningHasOccurred = hour >= 18; // assume evening session occurs at/after 18:00
+
+    const today = startOfDay(now);
+    const yesterday = prevDate(today);
+
+    const morningDate = morningHasOccurred ? today : yesterday;
+    const morningPrevDate = prevDate(morningDate);
+
+    const eveningDate = eveningHasOccurred ? today : yesterday;
+    const eveningPrevDate = prevDate(eveningDate);
+
+    const [morningStats, morningPrevStats, eveningStats, eveningPrevStats] = await Promise.all([
+      this.repository.getDailyStats(morningDate),
+      this.repository.getDailyStats(morningPrevDate),
+      this.repository.getDailyStats(eveningDate),
+      this.repository.getDailyStats(eveningPrevDate),
+    ]);
+
+    const mAmount = (morningStats && morningStats.byShift) ? (morningStats.byShift.Morning || 0) : 0;
+    const mPrev = (morningPrevStats && morningPrevStats.byShift) ? (morningPrevStats.byShift.Morning || 0) : 0;
+    const eAmount = (eveningStats && eveningStats.byShift) ? (eveningStats.byShift.Evening || 0) : 0;
+    const ePrev = (eveningPrevStats && eveningPrevStats.byShift) ? (eveningPrevStats.byShift.Evening || 0) : 0;
+
+    const morningDiff = mAmount - mPrev;
+    const eveningDiff = eAmount - ePrev;
+
+    return {
+      morning: { date: formatted(morningDate), amount: mAmount },
+      morningPrev: { date: formatted(morningPrevDate), amount: mPrev },
+      evening: { date: formatted(eveningDate), amount: eAmount },
+      eveningPrev: { date: formatted(eveningPrevDate), amount: ePrev },
+      morningChange: morningDiff,
+      eveningChange: eveningDiff,
+      morningDirection: morningDiff > 0 ? 'increase' : morningDiff < 0 ? 'decrease' : 'stable',
+      eveningDirection: eveningDiff > 0 ? 'increase' : eveningDiff < 0 ? 'decrease' : 'stable'
     };
   }
 }

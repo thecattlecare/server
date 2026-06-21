@@ -43,3 +43,10 @@ export interface IApiResponse<T> {
   error?: any;
   pagination?: PaginatedResult<T>['pagination'];
 }
+
+export interface INotification {
+  id?: string;
+  direction: 'positive' | 'negative' | 'neutral';
+  message: string;
+  createdAt: string;
+}

@@ -6,7 +6,9 @@ export type VaccinationStatus = 'Scheduled' | 'Completed' | 'Missed';
 export interface IDiseaseRecordInput {
   animalId: string | Types.ObjectId;
   disease: string;
+  treatment?: string;
   medicine?: string;
+  treatmentCost?: number;
   status?: DiseaseStatus;
   startDate: Date | string;
   notes?: string;
