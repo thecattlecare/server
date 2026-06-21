@@ -14,7 +14,7 @@ import { authenticateRequest } from './module/auth/auth.middleware';
 import { ApiResponse } from './utils/api-response';
 import { ApiError } from './utils/api-error';
 import staffRoutes from './module/staff/staff.route';
-
+import financeRoutes from './module/finance/finance.route';
 const app = express();
 
 // Middleware
@@ -56,6 +56,7 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use('/api/finance', financeRoutes);
 // Dev-only test route to broadcast a synthetic milk notification (public in development)
 // if (process.env.NODE_ENV !== 'production') {
 //   app.post('/api/dev/notify', (req, res) => {
