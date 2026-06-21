@@ -3,8 +3,8 @@ import { createServer } from 'http';
 import app from "./app";
 import { connectDatabase } from "./config/db";
 // import { seedAdminUser } from "./utils/seed-admin";
-import { initializeMilkNotificationSocket } from './utils/milk-notifications';
 import { initializeAllSchedulers } from './schedulers/session-cleanup.scheduler';
+import { initializeNotificationSocket } from './utils/notifications';
 
 const PORT = process.env.PORT || 5000;
 
@@ -23,11 +23,13 @@ const startLocalServer = async () => {
 
     // Start server
     const httpServer = createServer(app);
-    initializeMilkNotificationSocket(httpServer);
+    // initializeMilkNotificationSocket(httpServer);
+    initializeNotificationSocket(httpServer)
+
 
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`🔌 WebSocket notifications on ws://localhost:${PORT}/ws/milk-notifications`);
+      console.log(`🔌 WebSocket notifications on ws://localhost:${PORT}/ws/notifications`);
       console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {

@@ -2,6 +2,7 @@
 import cron from 'node-cron';
 import { AuthSession } from '../module/auth/session.model';
 import { initializeTaskSchedulers } from './task-reset.scheduler';
+import { initializeNotificationSchedulers } from './notifications.scheduler';
 
 export function initializeSessionCleanup() {
   // Run every day at midnight (you can adjust the schedule)
@@ -36,4 +37,5 @@ export function initializeSessionCleanup() {
 export function initializeAllSchedulers() {
   initializeSessionCleanup();
   initializeTaskSchedulers();
+  initializeNotificationSchedulers();
 }
