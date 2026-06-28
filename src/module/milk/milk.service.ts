@@ -258,7 +258,6 @@ export class MilkService {
         id: cattle._id,
         name: cattle.name,
         tag: cattle.tag,
-        rfid: cattle.rfid
       },
       records: records.data,
       chartData: Object.values(chartData),
