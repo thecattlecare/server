@@ -46,7 +46,7 @@ export class MilkService {
       recordedBy: data.recordedBy ? new Types.ObjectId(data.recordedBy as string) : undefined
     });
 
-    return this.repository.findById(record._id.toString(), { path: 'cattleId', select: 'name tag rfid' });
+    return this.repository.findById(record._id.toString(), { path: 'cattleId', select: 'name tag' });
   }
 
   async getMilkRecords(filter: IMilkFilter = {}) {
@@ -54,7 +54,7 @@ export class MilkService {
   }
 
   async getMilkRecordById(id: string) {
-    const record = await this.repository.findById(id, { path: 'cattleId', select: 'name tag rfid group' });
+    const record = await this.repository.findById(id, { path: 'cattleId', select: 'name tag group' });
     if (!record) {
       throw new ApiError(404, 'Milk record not found');
     }
@@ -92,7 +92,7 @@ export class MilkService {
       throw new ApiError(404, 'Milk record not found');
     }
 
-    return this.repository.findById(updated._id.toString(), { path: 'cattleId', select: 'name tag rfid' });
+    return this.repository.findById(updated._id.toString(), { path: 'cattleId', select: 'name tag' });
   }
 
   async deleteMilkRecord(id: string) {
@@ -220,7 +220,7 @@ export class MilkService {
       topProducers: topProducers.map(p => ({
         cattleId: p.cattleId.toString(),
         name: p.name,
-        tag: p.tag || p.rfid?.slice(-6) || 'N/A',
+        tag: p.tag || 'N/A',
         totalAmount: p.totalAmount,
         averagePerDay: p.averagePerDay
       }))
@@ -258,7 +258,6 @@ export class MilkService {
         id: cattle._id,
         name: cattle.name,
         tag: cattle.tag,
-        rfid: cattle.rfid
       },
       records: records.data,
       chartData: Object.values(chartData),

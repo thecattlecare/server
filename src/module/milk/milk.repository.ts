@@ -10,7 +10,7 @@ export class MilkRepository extends BaseRepository<IMilk> {
 
   async findByCattleId(cattleId: string, filter?: IMilkFilter) {
     const query: any = { cattleId: new Types.ObjectId(cattleId) };
-    
+
     if (filter?.startDate || filter?.endDate) {
       query.date = {};
       if (filter.startDate) query.date.$gte = filter.startDate;
@@ -25,13 +25,13 @@ export class MilkRepository extends BaseRepository<IMilk> {
       .find(query)
       .sort({ date: -1, shift: -1 })
       .limit(filter?.limit || 100)
-      .populate('cattleId', 'name tag rfid');
+      .populate('cattleId', 'name tag');
   }
 
   async getDailyStats(date: Date = new Date()): Promise<IMilkStats> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -146,7 +146,7 @@ export class MilkRepository extends BaseRepository<IMilk> {
     const [data, total] = await Promise.all([
       this.model
         .find(query)
-        .populate('cattleId', 'name tag rfid gender group isActive')
+        .populate('cattleId', 'name tag gender group isActive')
         .sort({ date: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -199,7 +199,6 @@ export class MilkRepository extends BaseRepository<IMilk> {
           cattleId: '$_id',
           name: '$cattle.name',
           tag: '$cattle.tag',
-          rfid: '$cattle.rfid',
           totalAmount: 1,
           averagePerDay: 1,
           recordCount: 1
@@ -245,7 +244,7 @@ export class MilkRepository extends BaseRepository<IMilk> {
     // Fill in missing days with 0
     const dayMap: Record<string, number> = {};
     const currentDate = new Date(startDate);
-    
+
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0];
       dayMap[dateStr] = 0;
@@ -327,7 +326,7 @@ export class MilkRepository extends BaseRepository<IMilk> {
 
     const monthMap: Record<string, number> = {};
     const currentDate = new Date(startDate);
-    
+
     while (currentDate <= endDate) {
       const monthStr = currentDate.toISOString().slice(0, 7);
       monthMap[monthStr] = 0;

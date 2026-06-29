@@ -162,7 +162,7 @@ export class ReportsService {
           $project: {
             animalId: { $toString: '$cattleId' },
             animalName: { $ifNull: ['$animal.name', 'Unknown'] },
-            earTag: { $ifNull: ['$animal.tag', { $ifNull: ['$animal.rfid', '-'] }] },
+            earTag: { $ifNull: ['$animal.tag', '-'] },
             date: 1,
             session: '$shift',
             quantityProduced: '$amount',
@@ -203,7 +203,7 @@ export class ReportsService {
           $project: {
             animalId: { $toString: '$_id' },
             animalName: { $ifNull: ['$animal.name', 'Unknown'] },
-            earTag: { $ifNull: ['$animal.tag', { $ifNull: ['$animal.rfid', '-'] }] },
+            earTag: { $ifNull: ['$animal.tag', '-'] },
             totalMilkProduction: 1,
             averageMilkProduction: 1,
             recordCount: 1,
@@ -423,7 +423,7 @@ export class ReportsService {
       {
         $project: {
           animalName: { $ifNull: ['$animal.name', 'Unknown'] },
-          earTag: { $ifNull: ['$animal.tag', { $ifNull: ['$animal.rfid', '-'] }] },
+          earTag: { $ifNull: ['$animal.tag', '-'] },
           disease: 1,
           treatment: { $ifNull: ['$treatment', '$medicine'] },
           medicine: { $ifNull: ['$medicine', '-'] },
@@ -476,7 +476,7 @@ export class ReportsService {
         return {
           _id: animal._id.toString(),
           animalName: animal.name,
-          earTag: animal.tag || animal.rfid || '-',
+          earTag: animal.tag || '-',
           breedingDate,
           breedingType: parsed.breedingType,
           semenBullInfo: parsed.semenBullInfo,
