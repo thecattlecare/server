@@ -25,7 +25,6 @@ export interface IMilkResponse extends IMilkBase {
     _id: string;
     name: string;
     tag?: string;
-    rfid?: string;
   };
   createdAt: Date;
   updatedAt: Date;
