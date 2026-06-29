@@ -4,6 +4,7 @@ import { ApiError } from '../../utils/api-error';
 import { PaginatedResult, QueryParams } from '../../utils/types';
 import { IAnimal } from './cattle.types';
 import { FilterQuery } from 'mongoose';
+import { broadcastNotification } from '../../utils/notifications';
 
 export class CattleService {
   private cattleRepository: CattleRepository;
@@ -25,6 +26,33 @@ export class CattleService {
     }
 
     const cattle = await this.cattleRepository.create(data as any);
+    if (cattle.dam) {
+      const res = await this.cattleRepository.findById(cattle.dam as any)
+      if (res?.group === 'Heifer') {
+        const heifer = await this.cattleRepository.update(res._id, {
+          group: 'Cow',
+          parity: 1,
+          lactationStage: 'Early',
+          reproductiveStatus: 'Open'
+        })
+        broadcastNotification('cattle', {
+          direction: 'positive',
+          message: `Heifer "${heifer?.name}" is promoted to Cow, after its first calving!`,
+          createdAt: new Date().toISOString(),
+        })
+      } else if (res?.group === 'Cow') {
+        const cow = await this.cattleRepository.update(res._id, {
+          parity: res?.parity ? res?.parity + 1 : 1,
+          lactationStage: 'Early',
+          reproductiveStatus: 'Open'
+        })
+        broadcastNotification('cattle', {
+          direction: 'positive',
+          message: `Cattle "${cow?.name}" is promoted to parity # ${cow?.parity}!`,
+          createdAt: new Date().toISOString(),
+        })
+      }
+    }
     return cattle;
   }
 
