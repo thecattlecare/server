@@ -74,7 +74,7 @@ export const createCattleSchema = z.object({
   sire: z.string().trim().optional(),
   semenInfo: SemenInfoSchema,
   healthStatus: z.string().trim().max(100, 'Health status must be less than 100 characters').optional(),
-  origin: z.enum(['', '']).optional(),
+  origin: z.enum(['Born on Farm', 'Purchased']).optional(),
   purchaseRate: z.number().nonnegative('Purchasing Amount should always positive').int().optional(),
   purchaseDate: optionalDate,
   notes: z.string().trim().max(500, 'Notes must be less than 500 characters').optional(),

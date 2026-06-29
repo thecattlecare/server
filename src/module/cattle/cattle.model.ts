@@ -73,9 +73,9 @@ const AnimalSchema = new Schema<IAnimal>(
 
     // ── Lineage ───────────────────────────────────────────────────────────────
     dam: { type: Schema.Types.ObjectId, ref: 'Animal', default: null },
-    sireType: { type: String, enum: ['bull', 'semen', 'unknown'], default: null },
-    sire: { type: Schema.Types.ObjectId, ref: 'Animal', default: null },
-    semenInfo: { type: SemenInfoSchema, default: null },
+    sireType: { type: String, enum: ['bull', 'semen', 'unknown'] },
+    sire: { type: Schema.Types.ObjectId, ref: 'Animal' },
+    semenInfo: { type: SemenInfoSchema },
 
     // ── Meta ──────────────────────────────────────────────────────────────────
     healthStatus: { type: String, default: 'Healthy' },
@@ -97,21 +97,26 @@ AnimalSchema.index({ sire: 1 });
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 // sire ref only makes sense when sireType is 'bull'
+// ─── Validation ───────────────────────────────────────────────────────────────
 AnimalSchema.pre('save', function (next) {
+  // sireType = 'bull' → sire ObjectId required
   if (this.sireType === 'bull' && !this.sire) {
     return next(new Error('sire reference is required when sireType is "bull"'));
   }
-  if (this.sireType === 'semen' && !this.semenInfo?.bullName) {
-    return next(new Error('semenInfo.bullName is required when sireType is "semen"'));
-  }
-  if (this.sireType !== 'semen') {
-    this.semenInfo = undefined;
-  }
-  if (this.sireType !== 'bull') {
-    this.sire = undefined;
-  }
 
-  // lactation fields are only relevant for females
+  // sireType = 'semen' → at least bullName required
+  // if (this.sireType === 'semen') {
+  //   const bullName = this.get('semenInfo.bullName');   // ← use .get() to pierce the subdoc
+  //   if (!bullName || String(bullName).trim() === '') {
+  //     return next(new Error('bull name is required when sireType is "semen"'));
+  //   }
+  // }
+
+  // Clear irrelevant lineage fields
+  if (this.sireType !== 'semen') this.semenInfo = undefined;
+  if (this.sireType !== 'bull') this.sire = undefined;
+
+  // Lactation fields are male-irrelevant
   if (this.gender === 'Male') {
     this.parity = undefined;
     this.lactationStage = undefined;

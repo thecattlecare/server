@@ -32,7 +32,7 @@ export class HealthRepository {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       DiseaseRecord.find(filter)
-        .populate('animalId', 'name rfid tag')
+        .populate('animalId', 'name tag')
         .sort({ startDate: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -52,7 +52,7 @@ export class HealthRepository {
   }
 
   async getDiseaseRecordById(id: string) {
-    return DiseaseRecord.findById(id).populate('animalId', 'name rfid tag').lean();
+    return DiseaseRecord.findById(id).populate('animalId', 'name tag').lean();
   }
 
   async createDiseaseRecord(payload: Partial<IDiseaseRecord>) {
@@ -78,7 +78,7 @@ export class HealthRepository {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       VaccinationRecord.find(filter)
-        .populate('animalId', 'name rfid tag')
+        .populate('animalId', 'name tag')
         .sort({ scheduledAt: 1 })
         .skip(skip)
         .limit(limit)
@@ -106,7 +106,7 @@ export class HealthRepository {
       scheduledAt: { $gte: now, $lte: end },
       status: 'Scheduled',
     })
-      .populate('animalId', 'name rfid tag')
+      .populate('animalId', 'name tag')
       .sort({ scheduledAt: 1 })
       .lean();
   }
