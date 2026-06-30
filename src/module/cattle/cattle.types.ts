@@ -45,7 +45,7 @@ const lactationStageEnum = z.enum(['Early', 'Mid', 'Late', 'Dry']).optional();
 const reproductiveStatusEnum = z.enum(['Pregnant', 'Inseminated', 'Open']).optional();
 const sireEnum = z.enum(['bull', 'semen', 'unknown']).optional();
 const SemenInfoSchema = z.object({
-  fullName: z.string().optional(),
+  bullName: z.string().optional(),
   breed: z.string().optional(),
   source: z.string().optional(),
   strawCode: z.string().optional(),

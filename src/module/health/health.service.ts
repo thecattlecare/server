@@ -8,7 +8,7 @@ import {
   IMedicineStockInput,
   IVaccinationRecordInput,
 } from './health.types';
-import { broadcastNotification } from '../../utils/notifications';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 export class HealthService {
   private repository = new HealthRepository();
@@ -104,10 +104,10 @@ export class HealthService {
           direction = 'neutral'; // No change in severity level
         }
 
-        broadcastNotification('health', {
-          direction: direction,
+        void createAndBroadcastNotification({
+          type: 'health',
+          direction,
           message: `Cattle "${animalName}" health updated. Status changed from ${previousStatus} to ${newStatus}`,
-          createdAt: new Date().toISOString()
         });
       }
     } catch (err) {
@@ -148,11 +148,11 @@ export class HealthService {
       const scheduled = new Date(record.scheduledAt as any);
       const eightHours = new Date(now.getTime() + 8 * 60 * 60 * 1000);
       if (scheduled >= now && scheduled <= eightHours) {
-        // broadcastNotification('vaccination-upcoming', { id: record._id, vaccination: record });
-        broadcastNotification('vaccination', {
+        void createAndBroadcastNotification({
+          type: 'vaccination',
           direction: 'neutral',
           message: `A scheduled vaccination ${record.vaccineName} is upcoming, on ${record.scheduledAt}`,
-          createdAt: new Date().toISOString(),
+          metadata: { vaccinationId: String(record._id) },
         });
       }
     } catch (err) {
@@ -187,11 +187,11 @@ export class HealthService {
       const scheduled = new Date(updated.scheduledAt as any);
       const eightHours = new Date(now.getTime() + 8 * 60 * 60 * 1000);
       if (scheduled >= now && scheduled <= eightHours) {
-        // broadcastNotification('vaccination-upcoming', { id: updated._id, vaccination: updated });
-        broadcastNotification('vaccination', {
+        void createAndBroadcastNotification({
+          type: 'vaccination',
           direction: 'neutral',
           message: `A scheduled vaccination ${updated.vaccineName} is upcoming, on ${updated.scheduledAt}`,
-          createdAt: new Date().toISOString(),
+          metadata: { vaccinationId: String(updated._id) },
         });
       }
     } catch (err) {
