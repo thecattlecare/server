@@ -4,7 +4,7 @@ import { MilkSaleService } from './milk-sale.service';
 import { asyncHandler } from '../../utils/async-handler';
 import { ApiResponse } from '../../utils/api-response';
 import { IMilkCreate, IMilkFilter } from './milk.types';
-import { broadcastNotification } from '../../utils/notifications';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 export class MilkController {
   private service = new MilkService();
@@ -20,7 +20,12 @@ export class MilkController {
 
     try {
       // broadcastMilkProductionChange is synchronous currently but wrap in Promise.resolve
-      await Promise.resolve(broadcastNotification('milk', notification));
+      await createAndBroadcastNotification({
+        type: 'milk',
+        direction: notification.direction,
+        message: notification.message,
+        metadata: notification.id ? { referenceId: notification.id } : undefined,
+      });
       console.log('broadcastProductionChange: broadcast completed successfully');
     } catch (error) {
       console.error('broadcastProductionChange: error while broadcasting milk production notification:', error);

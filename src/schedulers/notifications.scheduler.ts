@@ -5,7 +5,7 @@ import { CattleRepository } from '../module/cattle/cattle.repository';
 import { Staff } from '../module/staff/staff.model';
 import { Task } from '../module/task/task.model';
 import { Animal } from '../module/cattle/cattle.model';
-import { broadcastNotification } from '../utils/notifications';
+import { createAndBroadcastNotification } from '../module/notification/notification.service';
 
 const healthRepo = new HealthRepository();
 const taskRepo = new TaskRepository();
@@ -32,11 +32,12 @@ export function initializeNotificationSchedulers() {
           const key = `vac-${vac._id}`;
           if (!notifiedVaccinations.has(key)) {
             notifiedVaccinations.add(key);
-            broadcastNotification('vaccination-upcoming', {
-              id: key,
+            void createAndBroadcastNotification({
+              type: 'vaccination-upcoming',
               direction: 'neutral',
               message: `A scheduled vaccination ${vac.vaccineName} is upcoming on ${new Date(vac.scheduledAt as any).toLocaleDateString()}. ${Math.max(0, Math.round((scheduled.getTime() - now.getTime()) / (60 * 60 * 1000)))} hour(s) remaining.`,
-              createdAt: new Date().toISOString(),
+              dedupeKey: key,
+              metadata: { vaccinationId: String(vac._id) },
             });
           }
         }
@@ -54,11 +55,14 @@ export function initializeNotificationSchedulers() {
         const key = `task-due-${t._id}`;
         if (!notifiedTaskDue.has(key)) {
           notifiedTaskDue.add(key);
-          broadcastNotification('task', {
-            id: `task-due-${t._id}`,
+          void createAndBroadcastNotification({
+            type: 'task',
             direction: 'neutral',
             message: `Task "${t.title}" is due within the next hour. Please complete it before the deadline.`,
-            createdAt: new Date().toISOString(),
+            dedupeKey: key,
+            metadata: { taskId: String(t._id) },
+            recipientId: t.assignedTo ? String(t.assignedTo) : undefined,
+            audience: t.assignedTo ? undefined : 'all',
           });
         }
       }
@@ -74,11 +78,12 @@ export function initializeNotificationSchedulers() {
         const key = `calving-${a._id}`;
         if (!notifiedCalvings.has(key)) {
           notifiedCalvings.add(key);
-          broadcastNotification('calving', {
-            id: `calving-${a._id}`,
+          void createAndBroadcastNotification({
+            type: 'calving',
             direction: 'neutral',
             message: `Animal ${a.name} has a calving date of ${new Date(a.calvingDate as any).toLocaleDateString()}, which is within the next 24 hours. Please make necessary preparations.`,
-            createdAt: new Date().toISOString(),
+            dedupeKey: key,
+            metadata: { cattleId: String(a._id) },
           });
         }
       }

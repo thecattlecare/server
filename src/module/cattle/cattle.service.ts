@@ -4,6 +4,7 @@ import { ApiError } from '../../utils/api-error';
 import { PaginatedResult, QueryParams } from '../../utils/types';
 import { IAnimal } from './cattle.types';
 import { FilterQuery } from 'mongoose';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 export class CattleService {
   private cattleRepository: CattleRepository;
@@ -25,6 +26,33 @@ export class CattleService {
     }
 
     const cattle = await this.cattleRepository.create(data as any);
+    if (cattle.dam) {
+      const res = await this.cattleRepository.findById(cattle.dam as any)
+      if (res?.group === 'Heifer') {
+        const heifer = await this.cattleRepository.update(res._id, {
+          group: 'Cow',
+          parity: 1,
+          lactationStage: 'Early',
+          reproductiveStatus: 'Open'
+        })
+        void createAndBroadcastNotification({
+          type: 'cattle',
+          direction: 'positive',
+          message: `Heifer "${heifer?.name}" is promoted to Cow, after its first calving!`,
+        });
+      } else if (res?.group === 'Cow') {
+        const cow = await this.cattleRepository.update(res._id, {
+          parity: res?.parity ? res?.parity + 1 : 1,
+          lactationStage: 'Early',
+          reproductiveStatus: 'Open'
+        })
+        void createAndBroadcastNotification({
+          type: 'cattle',
+          direction: 'positive',
+          message: `Cattle "${cow?.name}" is promoted to parity # ${cow?.parity}!`,
+        });
+      }
+    }
     return cattle;
   }
 
@@ -69,7 +97,12 @@ export class CattleService {
    * Get cattle by ID
    */
   async getCattleById(id: string): Promise<IAnimal> {
-    const cattle = await this.cattleRepository.findById(id);
+    const cattle = await this.cattleRepository.findById(id, {
+      populate: [
+        { path: 'dam', select: 'name' },
+        { path: 'sire', select: 'name' }
+      ]
+    });
     if (!cattle) {
       throw ApiError.NOT_FOUND('Cattle not found');
     }
