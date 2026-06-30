@@ -97,7 +97,12 @@ export class CattleService {
    * Get cattle by ID
    */
   async getCattleById(id: string): Promise<IAnimal> {
-    const cattle = await this.cattleRepository.findById(id);
+    const cattle = await this.cattleRepository.findById(id, {
+      populate: [
+        { path: 'dam', select: 'name' },
+        { path: 'sire', select: 'name' }
+      ]
+    });
     if (!cattle) {
       throw ApiError.NOT_FOUND('Cattle not found');
     }
