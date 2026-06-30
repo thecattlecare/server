@@ -2,6 +2,7 @@ import { ApiError } from '../../utils/api-error';
 import { Types } from 'mongoose';
 import { MilkSaleRepository } from './milk-sale.repository';
 import { IMilkSaleCreate, IMilkSaleFilter, IMilkSaleUpdate } from './milk-sale.types';
+import { Income } from '../finance/finance.model';
 
 export class MilkSaleService {
   private repository = new MilkSaleRepository();
@@ -30,6 +31,23 @@ export class MilkSaleService {
       recordedBy: data.recordedBy ? new Types.ObjectId(data.recordedBy as string) : undefined,
     } as any);
 
+    // Sync to Income schema
+    try {
+      await Income.create({
+        milkSaleId: record._id,
+        source: 'milk_sale',
+        amount: money,
+        description: `Milk Sale - ${amount} Liters`,
+        date: saleDate,
+        paymentMethod: (data as any).paymentMethod || 'cash',
+        notes: data.notes,
+        createdBy: record.recordedBy,
+      });
+    } catch (error) {
+      console.error('Error syncing milk sale creation to Income:', error);
+      throw error;
+    }
+
     return this.repository.findById(record._id.toString());
   }
 
@@ -45,7 +63,7 @@ export class MilkSaleService {
     return record;
   }
 
-  async updateMilkSale(id: string, data: IMilkSaleUpdate) {
+  async updateMilkSale(id: string, data: IMilkSaleUpdate, userId?: string) {
     const record = await this.repository.findById(id);
     if (!record) {
       throw new ApiError(404, 'Milk sale record not found');
@@ -71,6 +89,42 @@ export class MilkSaleService {
       throw new ApiError(404, 'Milk sale record not found');
     }
 
+    // Sync to Income schema
+    try {
+      const finalAmount = updated.amount;
+      const finalMoney = updated.money;
+      const finalDate = updated.date;
+      const finalNotes = updated.notes;
+      const paymentMethod = (data as any).paymentMethod;
+
+      const updateFields: any = {
+        amount: finalMoney,
+        description: `Milk Sale - ${finalAmount} Liters`,
+        date: finalDate,
+        notes: finalNotes,
+      };
+      if (paymentMethod) {
+        updateFields.paymentMethod = paymentMethod;
+      }
+
+      await Income.findOneAndUpdate(
+        { milkSaleId: updated._id },
+        {
+          $set: updateFields,
+          $setOnInsert: {
+            milkSaleId: updated._id,
+            source: 'milk_sale',
+            createdBy: updated.recordedBy || (userId ? new Types.ObjectId(userId) : undefined),
+            paymentMethod: paymentMethod || 'cash',
+          }
+        },
+        { upsert: true, new: true }
+      );
+    } catch (error) {
+      console.error('Error syncing milk sale update to Income:', error);
+      throw error;
+    }
+
     return this.repository.findById(updated._id.toString());
   }
 
@@ -81,6 +135,15 @@ export class MilkSaleService {
     }
 
     await this.repository.delete(id);
+
+    // Sync to Income schema
+    try {
+      await Income.deleteOne({ milkSaleId: record._id });
+    } catch (error) {
+      console.error('Error deleting synced Income record:', error);
+      throw error;
+    }
+
     return { message: 'Milk sale record deleted successfully' };
   }
 
