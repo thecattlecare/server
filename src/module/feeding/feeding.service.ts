@@ -12,7 +12,7 @@ import {
   IFeedSupplierQuery,
   IFeedSupplierUpdate,
 } from './feeding.types';
-import { broadcastNotification } from '../../utils/notifications';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 const CRITICAL_THRESHOLD = 50;
 
@@ -61,11 +61,12 @@ export class FeedingService {
         //   message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
         //   createdAt: new Date().toISOString(),
         // });
-        broadcastNotification('feed', {
+        void createAndBroadcastNotification({
+          type: 'feed',
           direction: 'negative',
           message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining. Order more to avoid problems!`,
-          createdAt: new Date().toISOString(),
-        })
+          metadata: { feedId: record._id.toString() },
+        });
       }
     } catch (err) {
       console.error('Failed to broadcast feed low notification on create:', err);
@@ -89,11 +90,12 @@ export class FeedingService {
         //   message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining`,
         //   createdAt: new Date().toISOString(),
         // });
-        broadcastNotification('feed', {
+        void createAndBroadcastNotification({
+          type: 'feed',
           direction: 'negative',
           message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining. Order more to avoid problems!`,
-          createdAt: new Date().toISOString(),
-        })
+          metadata: { feedId: record._id.toString() },
+        });
       }
     } catch (err) {
       console.error('Failed to broadcast feed low notification on update:', err);
@@ -120,11 +122,12 @@ export class FeedingService {
         //   message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining`,
         //   createdAt: new Date().toISOString(),
         // });
-        broadcastNotification('feed', {
+        void createAndBroadcastNotification({
+          type: 'feed',
           direction: 'negative',
           message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining. Order more to avoid problems!`,
-          createdAt: new Date().toISOString(),
-        })
+          metadata: { feedId: record._id.toString() },
+        });
       }
     } catch (err) {
       console.error('Failed to broadcast feed low notification on adjust:', err);

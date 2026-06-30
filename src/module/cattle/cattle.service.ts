@@ -4,7 +4,7 @@ import { ApiError } from '../../utils/api-error';
 import { PaginatedResult, QueryParams } from '../../utils/types';
 import { IAnimal } from './cattle.types';
 import { FilterQuery } from 'mongoose';
-import { broadcastNotification } from '../../utils/notifications';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 export class CattleService {
   private cattleRepository: CattleRepository;
@@ -35,22 +35,22 @@ export class CattleService {
           lactationStage: 'Early',
           reproductiveStatus: 'Open'
         })
-        broadcastNotification('cattle', {
+        void createAndBroadcastNotification({
+          type: 'cattle',
           direction: 'positive',
           message: `Heifer "${heifer?.name}" is promoted to Cow, after its first calving!`,
-          createdAt: new Date().toISOString(),
-        })
+        });
       } else if (res?.group === 'Cow') {
         const cow = await this.cattleRepository.update(res._id, {
           parity: res?.parity ? res?.parity + 1 : 1,
           lactationStage: 'Early',
           reproductiveStatus: 'Open'
         })
-        broadcastNotification('cattle', {
+        void createAndBroadcastNotification({
+          type: 'cattle',
           direction: 'positive',
           message: `Cattle "${cow?.name}" is promoted to parity # ${cow?.parity}!`,
-          createdAt: new Date().toISOString(),
-        })
+        });
       }
     }
     return cattle;

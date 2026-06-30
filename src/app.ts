@@ -16,6 +16,7 @@ import { ApiError } from './utils/api-error';
 import staffRoutes from './module/staff/staff.route';
 import financeRoutes from './module/finance/finance.route';
 import reportsRoutes from './module/reports/reports.route';
+import notificationRoutes from './module/notification/notification.route';
 const app = express();
 
 // Middleware
@@ -92,6 +93,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/feeding', feedingRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use((req, res) => {
