@@ -24,11 +24,12 @@ export async function connectDatabase() {
       maxPoolSize: 10, // Important for serverless
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      // Removed the unsupported dnsCache option entirely
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongooseInstance) => {
       console.log('✅ MongoDB connected successfully');
-      return mongoose;
+      return mongooseInstance;
     });
   }
 
