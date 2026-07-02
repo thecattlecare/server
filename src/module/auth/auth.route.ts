@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from './auth.controller';
-import { authenticateRequest } from './auth.middleware';
+import { authenticateRequest, authorizeAdmin } from './auth.middleware';
 import { asyncHandler } from '../../utils/async-handler';
 
 const router = Router();
@@ -17,6 +17,6 @@ router.delete('/sessions/others', authenticateRequest, asyncHandler(controller.l
 router.delete('/sessions/all', authenticateRequest, asyncHandler(controller.logoutAll));
 router.delete('/sessions/:id', authenticateRequest, asyncHandler(controller.revokeSession));
 router.get('/users', authenticateRequest, asyncHandler(controller.getUsers));
-router.post('/users', authenticateRequest, asyncHandler(controller.createUser));
+router.post('/users', authenticateRequest, authorizeAdmin, asyncHandler(controller.createUser));
 
 export default router;

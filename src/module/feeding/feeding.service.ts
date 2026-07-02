@@ -12,7 +12,7 @@ import {
   IFeedSupplierQuery,
   IFeedSupplierUpdate,
 } from './feeding.types';
-import { broadcastFeedStockLow } from '../../utils/milk-notifications';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 const CRITICAL_THRESHOLD = 50;
 
@@ -50,16 +50,22 @@ export class FeedingService {
     // Broadcast if newly created stock is already below threshold
     try {
       if (record.stockKg < CRITICAL_THRESHOLD) {
-        broadcastFeedStockLow({
-          id: `${record._id}-${Date.now()}`,
-          feedId: record._id.toString(),
-          name: record.name,
-          brand: record.brand,
-          stockKg: record.stockKg,
-          unitPrice: record.unitPrice,
-          threshold: CRITICAL_THRESHOLD,
-          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
-          createdAt: new Date().toISOString(),
+        // broadcastFeedStockLow({
+        //   id: `${record._id}-${Date.now()}`,
+        //   feedId: record._id.toString(),
+        //   name: record.name,
+        //   brand: record.brand,
+        //   stockKg: record.stockKg,
+        //   unitPrice: record.unitPrice,
+        //   threshold: CRITICAL_THRESHOLD,
+        //   message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
+        //   createdAt: new Date().toISOString(),
+        // });
+        void createAndBroadcastNotification({
+          type: 'feed',
+          direction: 'negative',
+          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining. Order more to avoid problems!`,
+          metadata: { feedId: record._id.toString() },
         });
       }
     } catch (err) {
@@ -73,16 +79,22 @@ export class FeedingService {
     if (!record) throw ApiError.NOT_FOUND('Feed stock not found');
     try {
       if (record.stockKg < CRITICAL_THRESHOLD) {
-        broadcastFeedStockLow({
-          id: `${record._id}-${Date.now()}`,
-          feedId: record._id.toString(),
-          name: record.name,
-          brand: record.brand,
-          stockKg: record.stockKg,
-          unitPrice: record.unitPrice,
-          threshold: CRITICAL_THRESHOLD,
-          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
-          createdAt: new Date().toISOString(),
+        // broadcastFeedStockLow({
+        //   id: `${record._id}-${Date.now()}`,
+        //   feedId: record._id.toString(),
+        //   name: record.name,
+        //   brand: record.brand,
+        //   stockKg: record.stockKg,
+        //   unitPrice: record.unitPrice,
+        //   threshold: CRITICAL_THRESHOLD,
+        //   message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining`,
+        //   createdAt: new Date().toISOString(),
+        // });
+        void createAndBroadcastNotification({
+          type: 'feed',
+          direction: 'negative',
+          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining. Order more to avoid problems!`,
+          metadata: { feedId: record._id.toString() },
         });
       }
     } catch (err) {
@@ -99,16 +111,22 @@ export class FeedingService {
     await record.save();
     try {
       if (record.stockKg < CRITICAL_THRESHOLD) {
-        broadcastFeedStockLow({
-          id: `${record._id}-${Date.now()}`,
-          feedId: record._id.toString(),
-          name: record.name,
-          brand: record.brand,
-          stockKg: record.stockKg,
-          unitPrice: record.unitPrice,
-          threshold: CRITICAL_THRESHOLD,
-          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining` ,
-          createdAt: new Date().toISOString(),
+        // broadcastFeedStockLow({
+        //   id: `${record._id}-${Date.now()}`,
+        //   feedId: record._id.toString(),
+        //   name: record.name,
+        //   brand: record.brand,
+        //   stockKg: record.stockKg,
+        //   unitPrice: record.unitPrice,
+        //   threshold: CRITICAL_THRESHOLD,
+        //   message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining`,
+        //   createdAt: new Date().toISOString(),
+        // });
+        void createAndBroadcastNotification({
+          type: 'feed',
+          direction: 'negative',
+          message: `Feed "${record.name}" is low: ${record.stockKg}kg remaining. Order more to avoid problems!`,
+          metadata: { feedId: record._id.toString() },
         });
       }
     } catch (err) {

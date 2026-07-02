@@ -13,6 +13,7 @@ router.get('/stats/dashboard', controller.getDashboardStats);
 router.get('/stats/production-14days', controller.getLast14DaysProduction);
 router.get('/stats/production-12weeks', controller.getLast12WeeksProduction);
 router.get('/stats/production-12months', controller.getLast12MonthsProduction);
+router.get('/stats/sessions-latest', controller.getSessionStats);
 router.get('/stats/bulk', controller.getBulkStats);
 
 // Cattle-specific history
@@ -25,6 +26,9 @@ router.get('/sales/stats/daily', saleController.getTodaySaleStats);
 router.get('/sales/:id', saleController.getMilkSaleById);
 router.patch('/sales/:id', saleController.updateMilkSale);
 router.delete('/sales/:id', saleController.deleteMilkSale);
+
+// Prediction route
+router.post('/predict-farm', controller.predictFarmMilk);
 
 // CRUD routes
 router.post(

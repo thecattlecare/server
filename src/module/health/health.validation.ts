@@ -6,7 +6,9 @@ export const healthValidation = {
     body: z.object({
       animalId: objectIdSchema,
       disease: z.string().min(1, 'Disease is required'),
+      treatment: z.string().optional(),
       medicine: z.string().optional(),
+      treatmentCost: z.number().min(0).optional(),
       status: z.enum(['Active', 'Critical', 'Chronic', 'Recovered']).optional(),
       startDate: z.string().or(z.date()),
       notes: z.string().max(500).optional(),
@@ -17,7 +19,9 @@ export const healthValidation = {
     params: z.object({ id: objectIdSchema }),
     body: z.object({
       disease: z.string().min(1).optional(),
+      treatment: z.string().optional(),
       medicine: z.string().optional(),
+      treatmentCost: z.number().min(0).optional(),
       status: z.enum(['Active', 'Critical', 'Chronic', 'Recovered']).optional(),
       startDate: z.string().or(z.date()).optional(),
       notes: z.string().max(500).optional(),

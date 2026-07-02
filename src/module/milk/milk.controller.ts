@@ -4,7 +4,7 @@ import { MilkSaleService } from './milk-sale.service';
 import { asyncHandler } from '../../utils/async-handler';
 import { ApiResponse } from '../../utils/api-response';
 import { IMilkCreate, IMilkFilter } from './milk.types';
-import { broadcastMilkProductionChange } from '../../utils/milk-notifications';
+import { createAndBroadcastNotification } from '../../module/notification/notification.service';
 
 export class MilkController {
   private service = new MilkService();
@@ -18,15 +18,14 @@ export class MilkController {
       return;
     }
 
-    if (notification.difference === 0) {
-      console.log('broadcastProductionChange: no difference for', notification.affectedDate);
-      return;
-    }
-
     try {
-      console.log('broadcastProductionChange: broadcasting notification for', notification.affectedDate, 'difference:', notification.difference);
       // broadcastMilkProductionChange is synchronous currently but wrap in Promise.resolve
-      await Promise.resolve(broadcastMilkProductionChange(notification));
+      await createAndBroadcastNotification({
+        type: 'milk',
+        direction: notification.direction,
+        message: notification.message,
+        metadata: notification.id ? { referenceId: notification.id } : undefined,
+      });
       console.log('broadcastProductionChange: broadcast completed successfully');
     } catch (error) {
       console.error('broadcastProductionChange: error while broadcasting milk production notification:', error);
@@ -165,7 +164,7 @@ export class MilkController {
 
   getBulkStats = asyncHandler(async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
-    
+
     if (!startDate || !endDate) {
       return res.status(400).json(ApiResponse.error('Start date and end date are required'));
     }
@@ -203,5 +202,35 @@ export class MilkController {
   getLast12MonthsProduction = asyncHandler(async (req: Request, res: Response) => {
     const data = await this.service.getLast12MonthsProduction();
     return res.status(200).json(ApiResponse.success('Last 12 months production fetched successfully', data));
+  });
+
+  getSessionStats = asyncHandler(async (req: Request, res: Response) => {
+    const stats = await this.service.getLatestSessionStats();
+    return res.status(200).json(ApiResponse.success('Latest session stats fetched successfully', stats));
+  });
+
+  predictFarmMilk = asyncHandler(async (req: Request, res: Response) => {
+    // 1. Point to your Render URL (store this in your backend .env under PYTHON_AGENT_URL)
+    const agentUrl = process.env.PYTHON_AGENT_URL || 'https://milk-prediction-agent.onrender.com';
+
+    console.log(`predictFarmMilk: sending prediction request to hosted agent at ${agentUrl}/predict`);
+
+    try {
+      const response = await fetch(`${agentUrl}/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Agent returned status code ${response.status}`);
+      }
+      const result = await response.json();
+      return res.status(200).json(ApiResponse.success('Farm-wide milk prediction generated successfully', result));
+    } catch (err: any) {
+      console.error('predictFarmMilk connection error:', err);
+      return res.status(500).json(ApiResponse.error(`Hosted prediction agent failed: ${err.message}`));
+    }
   });
 }

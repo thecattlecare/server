@@ -8,12 +8,15 @@ import cattleRoutes from "./module/cattle/cattle.route";
 import milkRoutes from './module/milk/milk.route';
 import healthRoutes from './module/health/health.route';
 import feedingRoutes from './module/feeding/feeding.route';
+import taskRoutes from './module/task/task.route';
 import authRoutes from './module/auth/auth.route';
 import { authenticateRequest } from './module/auth/auth.middleware';
 import { ApiResponse } from './utils/api-response';
 import { ApiError } from './utils/api-error';
-import { broadcastMilkProductionChange } from './utils/milk-notifications';
-
+import staffRoutes from './module/staff/staff.route';
+import financeRoutes from './module/finance/finance.route';
+import reportsRoutes from './module/reports/reports.route';
+import notificationRoutes from './module/notification/notification.route';
 const app = express();
 
 // Middleware
@@ -55,26 +58,28 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use('/api/finance', financeRoutes);
+app.use('/api/reports', reportsRoutes);
 // Dev-only test route to broadcast a synthetic milk notification (public in development)
-if (process.env.NODE_ENV !== 'production') {
-  app.post('/api/dev/notify', (req, res) => {
-    const payload = req.body;
-    if (!payload) {
-      return res.status(400).json(ApiResponse.error('Missing notification payload'));
-    }
+// if (process.env.NODE_ENV !== 'production') {
+//   app.post('/api/dev/notify', (req, res) => {
+//     const payload = req.body;
+//     if (!payload) {
+//       return res.status(400).json(ApiResponse.error('Missing notification payload'));
+//     }
 
-    try {
-      console.log('DEV /api/dev/notify received payload:', payload);
-      // Broadcast without requiring authentication in development for easy testing
-      // Note: keep this guarded by NODE_ENV !== 'production'
-      broadcastMilkProductionChange(payload);
-      return res.status(200).json(ApiResponse.success('Notification broadcasted', payload));
-    } catch (err) {
-      console.error('Dev notify failed', err);
-      return res.status(500).json(ApiResponse.error('Failed to broadcast'));
-    }
-  });
-}
+//     try {
+//       console.log('DEV /api/dev/notify received payload:', payload);
+//       // Broadcast without requiring authentication in development for easy testing
+//       // Note: keep this guarded by NODE_ENV !== 'production'
+//       broadcastMilkProductionChange(payload);
+//       return res.status(200).json(ApiResponse.success('Notification broadcasted', payload));
+//     } catch (err) {
+//       console.error('Dev notify failed', err);
+//       return res.status(500).json(ApiResponse.error('Failed to broadcast'));
+//     }
+//   });
+// }
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -86,6 +91,9 @@ app.use('/api/cattle', cattleRoutes);
 app.use('/api/milk', milkRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/feeding', feedingRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use((req, res) => {

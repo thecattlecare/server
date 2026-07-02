@@ -10,6 +10,7 @@ export class MilkSaleController {
   createMilkSale = asyncHandler(async (req: Request, res: Response) => {
     const data: IMilkSaleCreate = {
       ...req.body,
+      recordedBy: req.body.recordedBy || req.auth?.userId,
     };
 
     const record = await this.service.createMilkSale(data);
@@ -36,7 +37,7 @@ export class MilkSaleController {
   });
 
   updateMilkSale = asyncHandler(async (req: Request, res: Response) => {
-    const record = await this.service.updateMilkSale(req.params.id, req.body);
+    const record = await this.service.updateMilkSale(req.params.id, req.body, req.auth?.userId);
     return res.status(200).json(ApiResponse.success('Milk sale updated successfully', record));
   });
 

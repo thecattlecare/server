@@ -4,9 +4,11 @@ import { UserRole } from './auth.types';
 export interface IAuthUserDocument extends Document {
   name: string;
   email: string;
+  phone?: string;
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  salary?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +30,11 @@ const AuthUserSchema = new Schema<IAuthUserDocument>(
       trim: true,
       index: true,
     },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [10, 'Phone number cannot exceed 10 characters'],
+    },
     passwordHash: {
       type: String,
       required: [true, 'Password hash is required'],
@@ -41,6 +48,11 @@ const AuthUserSchema = new Schema<IAuthUserDocument>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    salary: {
+      type: Number,
+      min: [0, 'Salary cannot be negative'],
+      default: 0,
     },
   },
   {

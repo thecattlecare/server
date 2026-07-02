@@ -3,6 +3,7 @@ import { IMilkCreate, IMilkUpdate, IMilkFilter, IMilkDashboardStats, IMilkProduc
 import { ApiError } from '../../utils/api-error';
 import { Types } from 'mongoose';
 import { Animal } from '../cattle/cattle.model';
+import { INotification } from '../../utils/types';
 
 export class MilkService {
   private repository = new MilkRepository();
@@ -22,7 +23,7 @@ export class MilkService {
     // Check for duplicate record (same cattle, shift, date)
     const startOfDay = new Date(data.date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(data.date);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -45,7 +46,7 @@ export class MilkService {
       recordedBy: data.recordedBy ? new Types.ObjectId(data.recordedBy as string) : undefined
     });
 
-    return this.repository.findById(record._id.toString(), { path: 'cattleId', select: 'name tag rfid' });
+    return this.repository.findById(record._id.toString(), { path: 'cattleId', select: 'name tag' });
   }
 
   async getMilkRecords(filter: IMilkFilter = {}) {
@@ -53,7 +54,7 @@ export class MilkService {
   }
 
   async getMilkRecordById(id: string) {
-    const record = await this.repository.findById(id, { path: 'cattleId', select: 'name tag rfid group' });
+    const record = await this.repository.findById(id, { path: 'cattleId', select: 'name tag group' });
     if (!record) {
       throw new ApiError(404, 'Milk record not found');
     }
@@ -70,7 +71,7 @@ export class MilkService {
     if (data.date || data.shift) {
       const startOfDay = new Date(data.date || record.date);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(data.date || record.date);
       endOfDay.setHours(23, 59, 59, 999);
 
@@ -91,7 +92,7 @@ export class MilkService {
       throw new ApiError(404, 'Milk record not found');
     }
 
-    return this.repository.findById(updated._id.toString(), { path: 'cattleId', select: 'name tag rfid' });
+    return this.repository.findById(updated._id.toString(), { path: 'cattleId', select: 'name tag' });
   }
 
   async deleteMilkRecord(id: string) {
@@ -107,7 +108,7 @@ export class MilkService {
     return this.repository.getDailyStats(new Date());
   }
 
-  async getProductionChangeNotification(targetDate: Date | string): Promise<IMilkProductionNotification> {
+  async getProductionChangeNotification(targetDate: Date | string): Promise<INotification> {
     const affectedDate = new Date(targetDate);
     const previousDate = new Date(affectedDate);
     previousDate.setDate(previousDate.getDate() - 1);
@@ -129,7 +130,7 @@ export class MilkService {
     if (!currentStatsRaw) {
       console.log('getProductionChangeNotification: current day has no stats, defaulting to 0 for', affectedDate.toISOString().split('T')[0]);
     }
-    const direction: IMilkProductionNotification['direction'] = difference > 0 ? 'increase' : difference < 0 ? 'decrease' : 'stable';
+    const direction: INotification['direction'] = difference > 0 ? 'positive' : difference < 0 ? 'negative' : 'neutral';
     const formattedAffectedDate = affectedDate.toISOString().split('T')[0];
     const formattedPreviousDate = previousDate.toISOString().split('T')[0];
     const amountChange = Math.abs(difference);
@@ -143,10 +144,10 @@ export class MilkService {
 
     return {
       id: `${formattedAffectedDate}-${Date.now()}`,
-      affectedDate: formattedAffectedDate,
-      currentAmount: currentStats.totalAmount,
-      previousAmount: previousStats.totalAmount,
-      difference,
+      // affectedDate: formattedAffectedDate,
+      // currentAmount: currentStats.totalAmount,
+      // previousAmount: previousStats.totalAmount,
+      // difference,
       direction,
       message,
       createdAt: new Date().toISOString(),
@@ -159,19 +160,19 @@ export class MilkService {
 
   async getDashboardStats(): Promise<IMilkDashboardStats> {
     const today = new Date();
-    
+
     // Start of today
     const startOfToday = new Date(today);
     startOfToday.setHours(0, 0, 0, 0);
-    
+
     // Start of week (last 7 days)
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - 7);
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     // Start of month
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
+
     // End of today
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
@@ -197,7 +198,7 @@ export class MilkService {
     const monthCount = monthRecords.length;
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const daysSoFar = today.getDate();
-    
+
     // Projected monthly total
     const projectedTotal = daysSoFar > 0 ? (monthTotal / daysSoFar) * daysInMonth : 0;
 
@@ -219,7 +220,7 @@ export class MilkService {
       topProducers: topProducers.map(p => ({
         cattleId: p.cattleId.toString(),
         name: p.name,
-        tag: p.tag || p.rfid?.slice(-6) || 'N/A',
+        tag: p.tag || 'N/A',
         totalAmount: p.totalAmount,
         averagePerDay: p.averagePerDay
       }))
@@ -257,7 +258,6 @@ export class MilkService {
         id: cattle._id,
         name: cattle.name,
         tag: cattle.tag,
-        rfid: cattle.rfid
       },
       records: records.data,
       chartData: Object.values(chartData),
@@ -279,5 +279,64 @@ export class MilkService {
 
   async getLast12MonthsProduction() {
     return this.repository.getLast12MonthsProduction();
+  }
+
+  async getLatestSessionStats() {
+    const now = new Date();
+
+    const formatted = (d: Date) => d.toISOString().split('T')[0];
+
+    const startOfDay = (d: Date) => {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+
+    const prevDate = (d: Date) => {
+      const x = new Date(d);
+      x.setDate(x.getDate() - 1);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+
+    // Decide whether today's Morning/Evening sessions have occurred yet.
+    const hour = now.getHours();
+    const morningHasOccurred = hour >= 12; // assume morning session occurs before noon
+    const eveningHasOccurred = hour >= 18; // assume evening session occurs at/after 18:00
+
+    const today = startOfDay(now);
+    const yesterday = prevDate(today);
+
+    const morningDate = morningHasOccurred ? today : yesterday;
+    const morningPrevDate = prevDate(morningDate);
+
+    const eveningDate = eveningHasOccurred ? today : yesterday;
+    const eveningPrevDate = prevDate(eveningDate);
+
+    const [morningStats, morningPrevStats, eveningStats, eveningPrevStats] = await Promise.all([
+      this.repository.getDailyStats(morningDate),
+      this.repository.getDailyStats(morningPrevDate),
+      this.repository.getDailyStats(eveningDate),
+      this.repository.getDailyStats(eveningPrevDate),
+    ]);
+
+    const mAmount = (morningStats && morningStats.byShift) ? (morningStats.byShift.Morning || 0) : 0;
+    const mPrev = (morningPrevStats && morningPrevStats.byShift) ? (morningPrevStats.byShift.Morning || 0) : 0;
+    const eAmount = (eveningStats && eveningStats.byShift) ? (eveningStats.byShift.Evening || 0) : 0;
+    const ePrev = (eveningPrevStats && eveningPrevStats.byShift) ? (eveningPrevStats.byShift.Evening || 0) : 0;
+
+    const morningDiff = mAmount - mPrev;
+    const eveningDiff = eAmount - ePrev;
+
+    return {
+      morning: { date: formatted(morningDate), amount: mAmount },
+      morningPrev: { date: formatted(morningPrevDate), amount: mPrev },
+      evening: { date: formatted(eveningDate), amount: eAmount },
+      eveningPrev: { date: formatted(eveningPrevDate), amount: ePrev },
+      morningChange: morningDiff,
+      eveningChange: eveningDiff,
+      morningDirection: morningDiff > 0 ? 'increase' : morningDiff < 0 ? 'decrease' : 'stable',
+      eveningDirection: eveningDiff > 0 ? 'increase' : eveningDiff < 0 ? 'decrease' : 'stable'
+    };
   }
 }

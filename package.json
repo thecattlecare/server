@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
-    "build": "tsc",
+    "build": "npm install --include=dev && tsc",
     "start": "node dist/server.js",
     "vercel-build": "npm run build"
   },
@@ -17,7 +17,9 @@
     "helmet": "^7.0.0",
     "mongoose": "^7.8.9",
     "morgan": "^1.10.0",
+    "node-cron": "^4.2.1",
     "request-ip": "^3.3.0",
+    "web-push": "^3.6.7",
     "ws": "^8.20.1",
     "zod": "^3.22.2"
   },
@@ -29,6 +31,7 @@
     "@types/morgan": "^1.9.4",
     "@types/node": "^20.5.0",
     "@types/request-ip": "^0.0.41",
+    "@types/web-push": "^3.6.4",
     "@vercel/node": "^5.8.1",
     "nodemon": "^3.0.1",
     "prettier": "3.8.1",
